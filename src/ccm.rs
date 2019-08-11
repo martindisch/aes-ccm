@@ -69,7 +69,7 @@ unsafe extern "C" fn ccm_ctr_mode(mut out: *mut uint8_t,
                                   mut inlen: libc::c_uint,
                                   mut ctr: *mut uint8_t,
                                   mut cipher: &Aes128) -> libc::c_int {
-    let mut buffer = unsafe { std::mem::uninitialized() };
+    let mut buffer = [0u8; 16];
     let mut nonce: [uint8_t; 16] = [0; 16];
     let mut block_num: uint16_t = 0;
     let mut i: libc::c_uint = 0;
@@ -88,8 +88,12 @@ unsafe extern "C" fn ccm_ctr_mode(mut out: *mut uint8_t,
             block_num = block_num.wrapping_add(1);
             nonce[14usize] = (block_num as libc::c_int >> 8i32) as uint8_t;
             nonce[15usize] = block_num as uint8_t;
-            buffer = GenericArray::from_mut_slice(&mut nonce);
-            cipher.encrypt_block(&mut buffer);
+            // Since we encrypt in-place, copy in the nonce
+            buffer.copy_from_slice(&nonce);
+            // Create a GenericArray pointing to it
+            let mut buffer_ref = GenericArray::from_mut_slice(&mut buffer);
+            // Pass the array to the cipher, for in-place encryption
+            cipher.encrypt_block(&mut buffer_ref);
         }
         *out =
             (buffer[i.wrapping_rem((4i32 * 4i32) as libc::c_uint) as usize] as
