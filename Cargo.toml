@@ -1,0 +1,11 @@
+[package]
+name = "block-modes"
+version = "0.1.0"
+authors = ["DurandA <arnaud.durand@unifr.ch>"]
+
+[dependencies]
+libc = "0.2.60"
+aes-soft = { git = "https://github.com/RustCrypto/block-ciphers" }
+
+[dev-dependancies]
+hex-literal = "*"
