@@ -47,6 +47,20 @@ mod tests {
             "588c979a61c663d2f066d0c2c0f989806d5f6b61dac38417e8d12cfdf926e0"
         );
         assert_eq!(expected[..], ciphertext[..expected.len()]);
+
+        let mut plaintext = [0u8; TC_CCM_MAX_CT_SIZE];
+        unsafe {
+            ccm::tc_ccm_decryption_verification(
+                plaintext.as_mut_ptr(),
+                plaintext.len() as u32,
+                hdr.as_ptr(),
+                hdr.len() as u32,
+                ciphertext.as_mut_ptr(),
+                expected.len() as u32,
+                &ccm,
+            );
+        }
+        assert_eq!(data, plaintext[..data.len()]);
     }
 
     #[test]
@@ -78,6 +92,20 @@ mod tests {
             "72c91a36e135f8cf291ca894085c87e3cc15c439c9e43a3ba091d56e10400916"
         );
         assert_eq!(expected[..], ciphertext[..expected.len()]);
+
+        let mut plaintext = [0u8; TC_CCM_MAX_CT_SIZE];
+        unsafe {
+            ccm::tc_ccm_decryption_verification(
+                plaintext.as_mut_ptr(),
+                plaintext.len() as u32,
+                hdr.as_ptr(),
+                hdr.len() as u32,
+                ciphertext.as_mut_ptr(),
+                expected.len() as u32,
+                &ccm,
+            );
+        }
+        assert_eq!(data, plaintext[..data.len()]);
     }
 
     #[test]
@@ -110,6 +138,20 @@ mod tests {
             1e838bb64da8596574adaa76fbd9fb0c5"
         );
         assert_eq!(expected[..], ciphertext[..expected.len()]);
+
+        let mut plaintext = [0u8; TC_CCM_MAX_CT_SIZE];
+        unsafe {
+            ccm::tc_ccm_decryption_verification(
+                plaintext.as_mut_ptr(),
+                plaintext.len() as u32,
+                hdr.as_ptr(),
+                hdr.len() as u32,
+                ciphertext.as_mut_ptr(),
+                expected.len() as u32,
+                &ccm,
+            );
+        }
+        assert_eq!(data, plaintext[..data.len()]);
     }
 
     #[test]
@@ -142,6 +184,20 @@ mod tests {
             94e999dfed96c048c56602c97acbb7490"
         );
         assert_eq!(expected[..], ciphertext[..expected.len()]);
+
+        let mut plaintext = [0u8; TC_CCM_MAX_CT_SIZE];
+        unsafe {
+            ccm::tc_ccm_decryption_verification(
+                plaintext.as_mut_ptr(),
+                plaintext.len() as u32,
+                hdr.as_ptr(),
+                hdr.len() as u32,
+                ciphertext.as_mut_ptr(),
+                expected.len() as u32,
+                &ccm,
+            );
+        }
+        assert_eq!(data, plaintext[..data.len()]);
     }
 
     #[test]
@@ -174,6 +230,20 @@ mod tests {
             ae6b6cd9b7db24c17b4433f434963f34b4"
         );
         assert_eq!(expected[..], ciphertext[..expected.len()]);
+
+        let mut plaintext = [0u8; TC_CCM_MAX_CT_SIZE];
+        unsafe {
+            ccm::tc_ccm_decryption_verification(
+                plaintext.as_mut_ptr(),
+                plaintext.len() as u32,
+                hdr.as_ptr(),
+                hdr.len() as u32,
+                ciphertext.as_mut_ptr(),
+                expected.len() as u32,
+                &ccm,
+            );
+        }
+        assert_eq!(data, plaintext[..data.len()]);
     }
 
     #[test]
@@ -206,5 +276,19 @@ mod tests {
             ce7f9b73f42e197ea9c07e56b5eb17e5f4e"
         );
         assert_eq!(expected[..], ciphertext[..expected.len()]);
+
+        let mut plaintext = [0u8; TC_CCM_MAX_CT_SIZE];
+        unsafe {
+            ccm::tc_ccm_decryption_verification(
+                plaintext.as_mut_ptr(),
+                plaintext.len() as u32,
+                hdr.as_ptr(),
+                hdr.len() as u32,
+                ciphertext.as_mut_ptr(),
+                expected.len() as u32,
+                &ccm,
+            );
+        }
+        assert_eq!(data, plaintext[..data.len()]);
     }
 }
