@@ -2,7 +2,8 @@
 extern crate libc;
 
 #[cfg(test)]
-#[macro_use] extern crate hex_literal;
+#[macro_use]
+extern crate hex_literal;
 extern crate aes_soft as aes;
 
 mod ccm;
@@ -31,16 +32,20 @@ mod tests {
         let data = hex!("08090a0b0c0d0e0f101112131415161718191a1b1c1d1e");
         let hdr = hex!("0001020304050607");
         unsafe {
-            ccm::tc_ccm_generation_encryption(ciphertext.as_mut_ptr(),
-                                        TC_CCM_MAX_CT_SIZE as u32,
-                                        hdr.as_ptr(),
-                                        hdr.len() as u32,
-                                        data.as_ptr(),
-                                        data.len() as u32,
-                                        ccm);
+            ccm::tc_ccm_generation_encryption(
+                ciphertext.as_mut_ptr(),
+                TC_CCM_MAX_CT_SIZE as u32,
+                hdr.as_ptr(),
+                hdr.len() as u32,
+                data.as_ptr(),
+                data.len() as u32,
+                ccm,
+            );
         }
 
-        let expected = hex!("588c979a61c663d2f066d0c2c0f989806d5f6b61dac38417e8d12cfdf926e0");
+        let expected = hex!(
+            "588c979a61c663d2f066d0c2c0f989806d5f6b61dac38417e8d12cfdf926e0"
+        );
         assert_eq!(expected[..], ciphertext[..expected.len()]);
     }
 
@@ -58,16 +63,20 @@ mod tests {
         let data = hex!("08090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f");
         let hdr = hex!("0001020304050607");
         unsafe {
-            ccm::tc_ccm_generation_encryption(ciphertext.as_mut_ptr(),
-                                        TC_CCM_MAX_CT_SIZE as u32,
-                                        hdr.as_ptr(),
-                                        hdr.len() as u32,
-                                        data.as_ptr(),
-                                        data.len() as u32,
-                                        ccm);
+            ccm::tc_ccm_generation_encryption(
+                ciphertext.as_mut_ptr(),
+                TC_CCM_MAX_CT_SIZE as u32,
+                hdr.as_ptr(),
+                hdr.len() as u32,
+                data.as_ptr(),
+                data.len() as u32,
+                ccm,
+            );
         }
 
-        let expected = hex!("72c91a36e135f8cf291ca894085c87e3cc15c439c9e43a3ba091d56e10400916");
+        let expected = hex!(
+            "72c91a36e135f8cf291ca894085c87e3cc15c439c9e43a3ba091d56e10400916"
+        );
         assert_eq!(expected[..], ciphertext[..expected.len()]);
     }
 
@@ -85,16 +94,21 @@ mod tests {
         let data = hex!("08090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20");
         let hdr = hex!("0001020304050607");
         unsafe {
-            ccm::tc_ccm_generation_encryption(ciphertext.as_mut_ptr(),
-                                        TC_CCM_MAX_CT_SIZE as u32,
-                                        hdr.as_ptr(),
-                                        hdr.len() as u32,
-                                        data.as_ptr(),
-                                        data.len() as u32,
-                                        ccm);
+            ccm::tc_ccm_generation_encryption(
+                ciphertext.as_mut_ptr(),
+                TC_CCM_MAX_CT_SIZE as u32,
+                hdr.as_ptr(),
+                hdr.len() as u32,
+                data.as_ptr(),
+                data.len() as u32,
+                ccm,
+            );
         }
 
-        let expected = hex!("51b1e5f44a197d1da46b0f8e2d282ae871e838bb64da8596574adaa76fbd9fb0c5");
+        let expected = hex!(
+            "51b1e5f44a197d1da46b0f8e2d282ae87
+            1e838bb64da8596574adaa76fbd9fb0c5"
+        );
         assert_eq!(expected[..], ciphertext[..expected.len()]);
     }
 
@@ -112,16 +126,21 @@ mod tests {
         let data = hex!("08090a0b0c0d0e0f101112131415161718191a1b1c1d1e");
         let hdr = hex!("0001020304050607");
         unsafe {
-            ccm::tc_ccm_generation_encryption(ciphertext.as_mut_ptr(),
-                                        TC_CCM_MAX_CT_SIZE as u32,
-                                        hdr.as_ptr(),
-                                        hdr.len() as u32,
-                                        data.as_ptr(),
-                                        data.len() as u32,
-                                        ccm);
+            ccm::tc_ccm_generation_encryption(
+                ciphertext.as_mut_ptr(),
+                TC_CCM_MAX_CT_SIZE as u32,
+                hdr.as_ptr(),
+                hdr.len() as u32,
+                data.as_ptr(),
+                data.len() as u32,
+                ccm,
+            );
         }
 
-        let expected = hex!("0135d1b2c95f41d5d1d4fec185d166b8094e999dfed96c048c56602c97acbb7490");
+        let expected = hex!(
+            "0135d1b2c95f41d5d1d4fec185d166b80
+            94e999dfed96c048c56602c97acbb7490"
+        );
         assert_eq!(expected[..], ciphertext[..expected.len()]);
     }
 
@@ -139,16 +158,21 @@ mod tests {
         let data = hex!("08090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f");
         let hdr = hex!("0001020304050607");
         unsafe {
-            ccm::tc_ccm_generation_encryption(ciphertext.as_mut_ptr(),
-                                        TC_CCM_MAX_CT_SIZE as u32,
-                                        hdr.as_ptr(),
-                                        hdr.len() as u32,
-                                        data.as_ptr(),
-                                        data.len() as u32,
-                                        ccm);
+            ccm::tc_ccm_generation_encryption(
+                ciphertext.as_mut_ptr(),
+                TC_CCM_MAX_CT_SIZE as u32,
+                hdr.as_ptr(),
+                hdr.len() as u32,
+                data.as_ptr(),
+                data.len() as u32,
+                ccm,
+            );
         }
 
-        let expected = hex!("7b75399ac0831dd2f0bbd75879a2fd8f6cae6b6cd9b7db24c17b4433f434963f34b4");
+        let expected = hex!(
+            "7b75399ac0831dd2f0bbd75879a2fd8f6c
+            ae6b6cd9b7db24c17b4433f434963f34b4"
+        );
         assert_eq!(expected[..], ciphertext[..expected.len()]);
     }
 
@@ -166,16 +190,21 @@ mod tests {
         let data = hex!("08090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20");
         let hdr = hex!("0001020304050607");
         unsafe {
-            ccm::tc_ccm_generation_encryption(ciphertext.as_mut_ptr(),
-                                        TC_CCM_MAX_CT_SIZE as u32,
-                                        hdr.as_ptr(),
-                                        hdr.len() as u32,
-                                        data.as_ptr(),
-                                        data.len() as u32,
-                                        ccm);
+            ccm::tc_ccm_generation_encryption(
+                ciphertext.as_mut_ptr(),
+                TC_CCM_MAX_CT_SIZE as u32,
+                hdr.as_ptr(),
+                hdr.len() as u32,
+                data.as_ptr(),
+                data.len() as u32,
+                ccm,
+            );
         }
 
-        let expected = hex!("82531a60CC24945a4b8279181ab5c84df21ce7f9b73f42e197ea9c07e56b5eb17e5f4e");
+        let expected = hex!(
+            "82531a60CC24945a4b8279181ab5c84df21
+            ce7f9b73f42e197ea9c07e56b5eb17e5f4e"
+        );
         assert_eq!(expected[..], ciphertext[..expected.len()]);
     }
 }
