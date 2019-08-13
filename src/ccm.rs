@@ -227,7 +227,9 @@ pub unsafe extern "C" fn tc_ccm_decryption_verification(
     );
     b[15usize] = 0i32 as uint8_t;
     b[14usize] = b[15usize];
-    // TODO: tc_aes_encrypt(b.as_mut_ptr(), b.as_mut_ptr(), (*c).sched);
+
+    let mut b_ref = GenericArray::from_mut_slice(&mut b);
+    (*c.cipher).encrypt_block(&mut b_ref);
     for i in 0..c.mlen {
         tag[i as usize] = (*payload
             .offset(plen as isize)
@@ -251,7 +253,8 @@ pub unsafe extern "C" fn tc_ccm_decryption_verification(
     }
     b[14usize] = (plen.wrapping_sub(c.mlen) >> 8i32) as uint8_t;
     b[15usize] = plen.wrapping_sub(c.mlen) as uint8_t;
-    // TODO: tc_aes_encrypt(b.as_mut_ptr(), b.as_mut_ptr(), (*c).sched);
+    let mut b_ref = GenericArray::from_mut_slice(&mut b);
+    (*c.cipher).encrypt_block(&mut b_ref);
     if alen > 0i32 as libc::c_uint {
         ccm_cbc_mac(
             b.as_mut_ptr(),
@@ -273,7 +276,9 @@ pub unsafe extern "C" fn tc_ccm_decryption_verification(
     if &b[..c.mlen as usize] == &tag[..c.mlen as usize] {
         return 1i32;
     } else {
-        /* TODO: _set(out, 0i32, plen.wrapping_sub((*c).mlen));*/
+        for i in 0..olen {
+            *out.add(i as usize) = 0;
+        }
         return 0i32;
     };
 }
