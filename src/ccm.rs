@@ -24,7 +24,7 @@ unsafe extern "C" fn ccm_cbc_mac(
     mut data: *const uint8_t,
     mut dlen: libc::c_uint,
     mut flag: libc::c_uint,
-    mut cipher: &Aes128,
+    cipher: &Aes128,
 ) {
     let mut i: libc::c_uint = 0;
     if flag > 0i32 as libc::c_uint {
@@ -73,7 +73,7 @@ unsafe extern "C" fn ccm_ctr_mode(
     mut in_0: *const uint8_t,
     mut inlen: libc::c_uint,
     mut ctr: *mut uint8_t,
-    mut cipher: &Aes128,
+    cipher: &Aes128,
 ) -> libc::c_int {
     let mut buffer = [0u8; 16];
     let mut nonce: [uint8_t; 16] = [0; 16];
@@ -124,7 +124,7 @@ pub unsafe extern "C" fn tc_ccm_generation_encryption(
     mut alen: libc::c_uint,
     mut payload: *const uint8_t,
     mut plen: libc::c_uint,
-    c: CcmMode,
+    c: &CcmMode,
 ) -> libc::c_int {
     if out.is_null() /*|| c.is_null()*/ ||
            plen > 0i32 as libc::c_uint && payload == 0 as *mut uint8_t ||
@@ -197,7 +197,7 @@ pub unsafe extern "C" fn tc_ccm_decryption_verification(
     mut alen: libc::c_uint,
     mut payload: *const uint8_t,
     mut plen: libc::c_uint,
-    c: CcmMode,
+    c: &CcmMode,
 ) -> libc::c_int {
     if out.is_null() /*|| c.is_null()*/ ||
            plen > 0i32 as libc::c_uint && payload == 0 as *mut uint8_t ||

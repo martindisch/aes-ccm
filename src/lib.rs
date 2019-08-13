@@ -39,7 +39,7 @@ mod tests {
                 hdr.len() as u32,
                 data.as_ptr(),
                 data.len() as u32,
-                ccm,
+                &ccm,
             );
         }
 
@@ -70,7 +70,7 @@ mod tests {
                 hdr.len() as u32,
                 data.as_ptr(),
                 data.len() as u32,
-                ccm,
+                &ccm,
             );
         }
 
@@ -101,7 +101,7 @@ mod tests {
                 hdr.len() as u32,
                 data.as_ptr(),
                 data.len() as u32,
-                ccm,
+                &ccm,
             );
         }
 
@@ -133,7 +133,7 @@ mod tests {
                 hdr.len() as u32,
                 data.as_ptr(),
                 data.len() as u32,
-                ccm,
+                &ccm,
             );
         }
 
@@ -165,7 +165,7 @@ mod tests {
                 hdr.len() as u32,
                 data.as_ptr(),
                 data.len() as u32,
-                ccm,
+                &ccm,
             );
         }
 
@@ -197,7 +197,7 @@ mod tests {
                 hdr.len() as u32,
                 data.as_ptr(),
                 data.len() as u32,
-                ccm,
+                &ccm,
             );
         }
 
