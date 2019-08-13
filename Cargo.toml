@@ -1,11 +1,13 @@
 [package]
 name = "block-modes"
 version = "0.1.0"
-authors = ["DurandA <arnaud.durand@unifr.ch>"]
+authors = ["DurandA <arnaud.durand@unifr.ch>", "Martin Disch <martindisch@gmail.com>"]
+license = "MIT OR Apache-2.0"
+edition = "2018"
 
 [dependencies]
 libc = "0.2.60"
-aes-soft = { git = "https://github.com/RustCrypto/block-ciphers" }
+aes-soft = "0.3.3"
 
 [dev-dependencies]
 hex-literal = "*"
