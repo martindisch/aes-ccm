@@ -7,6 +7,10 @@ extern crate hex_literal;
 extern crate aes_soft as aes;
 
 mod ccm;
+mod error;
+
+pub use ccm::CcmMode;
+pub use error::Error;
 
 #[cfg(test)]
 mod tests {
@@ -15,18 +19,17 @@ mod tests {
     use aes::block_cipher_trait::BlockCipher;
     use aes::Aes128;
 
+    use ccm::CcmMode;
+
     const TC_CCM_MAX_CT_SIZE: usize = 50;
 
     /// CCM test #1 (RFC 3610 test vector #1)
     #[test]
     fn test_vector_1() {
         let key = hex!("c0c1c2c3c4c5c6c7c8c9cacbcccdcecf");
-        let mut cipher = Aes128::new(GenericArray::from_slice(&key));
-        let ccm = ccm::CcmMode {
-            cipher: &mut cipher,
-            nonce: hex!("00000003020100a0a1a2a3a4a5"),
-            mlen: 8,
-        };
+        let cipher = Aes128::new(GenericArray::from_slice(&key));
+        let ccm = CcmMode::new(&cipher, hex!("00000003020100a0a1a2a3a4a5"), 8)
+            .unwrap();
 
         let mut ciphertext = [0u8; TC_CCM_MAX_CT_SIZE];
         let data = hex!("08090a0b0c0d0e0f101112131415161718191a1b1c1d1e");
@@ -66,12 +69,9 @@ mod tests {
     #[test]
     fn test_vector_2() {
         let key = hex!("c0c1c2c3c4c5c6c7c8c9cacbcccdcecf");
-        let mut cipher = Aes128::new(GenericArray::from_slice(&key));
-        let ccm = ccm::CcmMode {
-            cipher: &mut cipher,
-            nonce: hex!("00000004030201a0a1a2a3a4a5"),
-            mlen: 8,
-        };
+        let cipher = Aes128::new(GenericArray::from_slice(&key));
+        let ccm = CcmMode::new(&cipher, hex!("00000004030201a0a1a2a3a4a5"), 8)
+            .unwrap();
 
         let mut ciphertext = [0u8; TC_CCM_MAX_CT_SIZE];
         let data = hex!("08090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f");
@@ -111,12 +111,9 @@ mod tests {
     #[test]
     fn test_vector_3() {
         let key = hex!("c0c1c2c3c4c5c6c7c8c9cacbcccdcecf");
-        let mut cipher = Aes128::new(GenericArray::from_slice(&key));
-        let ccm = ccm::CcmMode {
-            cipher: &mut cipher,
-            nonce: hex!("00000005040302a0a1a2a3a4a5"),
-            mlen: 8,
-        };
+        let cipher = Aes128::new(GenericArray::from_slice(&key));
+        let ccm = CcmMode::new(&cipher, hex!("00000005040302a0a1a2a3a4a5"), 8)
+            .unwrap();
 
         let mut ciphertext = [0u8; TC_CCM_MAX_CT_SIZE];
         let data = hex!("08090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20");
@@ -157,12 +154,10 @@ mod tests {
     #[test]
     fn test_vector_4() {
         let key = hex!("c0c1c2c3c4c5c6c7c8c9cacbcccdcecf");
-        let mut cipher = Aes128::new(GenericArray::from_slice(&key));
-        let ccm = ccm::CcmMode {
-            cipher: &mut cipher,
-            nonce: hex!("00000009080706a0a1a2a3a4a5"),
-            mlen: 10,
-        };
+        let cipher = Aes128::new(GenericArray::from_slice(&key));
+        let ccm =
+            CcmMode::new(&cipher, hex!("00000009080706a0a1a2a3a4a5"), 10)
+                .unwrap();
 
         let mut ciphertext = [0u8; TC_CCM_MAX_CT_SIZE];
         let data = hex!("08090a0b0c0d0e0f101112131415161718191a1b1c1d1e");
@@ -203,12 +198,10 @@ mod tests {
     #[test]
     fn test_vector_5() {
         let key = hex!("c0c1c2c3c4c5c6c7c8c9cacbcccdcecf");
-        let mut cipher = Aes128::new(GenericArray::from_slice(&key));
-        let ccm = ccm::CcmMode {
-            cipher: &mut cipher,
-            nonce: hex!("0000000a090807a0a1a2a3a4a5"),
-            mlen: 10,
-        };
+        let cipher = Aes128::new(GenericArray::from_slice(&key));
+        let ccm =
+            CcmMode::new(&cipher, hex!("0000000a090807a0a1a2a3a4a5"), 10)
+                .unwrap();
 
         let mut ciphertext = [0u8; TC_CCM_MAX_CT_SIZE];
         let data = hex!("08090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f");
@@ -249,12 +242,10 @@ mod tests {
     #[test]
     fn test_vector_6() {
         let key = hex!("c0c1c2c3c4c5c6c7c8c9cacbcccdcecf");
-        let mut cipher = Aes128::new(GenericArray::from_slice(&key));
-        let ccm = ccm::CcmMode {
-            cipher: &mut cipher,
-            nonce: hex!("0000000b0a0908a0a1a2a3a4a5"),
-            mlen: 10,
-        };
+        let cipher = Aes128::new(GenericArray::from_slice(&key));
+        let ccm =
+            CcmMode::new(&cipher, hex!("0000000b0a0908a0a1a2a3a4a5"), 10)
+                .unwrap();
 
         let mut ciphertext = [0u8; TC_CCM_MAX_CT_SIZE];
         let data = hex!("08090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20");

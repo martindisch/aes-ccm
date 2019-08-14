@@ -1,3 +1,5 @@
+//! AES-CCM implementation.
+
 #![allow(dead_code,
          mutable_transmutes,
          non_camel_case_types,
@@ -9,13 +11,38 @@ use aes::block_cipher_trait::generic_array::GenericArray;
 use aes::block_cipher_trait::BlockCipher;
 use aes::Aes128;
 
+use crate::error::Error;
+
 pub type uint8_t = libc::c_uchar;
 pub type uint16_t = libc::c_ushort;
-pub struct CcmMode {
-    pub cipher: *mut Aes128,
+
+/// The AES-CCM instance.
+pub struct CcmMode<'a> {
+    /// The AES-128 instance to use.
+    pub cipher: &'a Aes128,
+    /// The 13-byte nonce.
     pub nonce: [u8; 13],
+    /// The MAC length in bytes.
     pub mlen: u32,
 }
+
+impl<'a> CcmMode<'a> {
+    /// Creates a new `CcmMode`.
+    ///
+    /// Valid `mlen` values are: 4, 6, 8, 10, 12, 14, 16.
+    pub fn new(
+        cipher: &'a Aes128,
+        nonce: [u8; 13],
+        mlen: u32,
+    ) -> Result<CcmMode, Error> {
+        Ok(CcmMode {
+            cipher,
+            nonce,
+            mlen,
+        })
+    }
+}
+
 /* *
  * Variation of CBC-MAC mode used in CCM.
  */
@@ -154,14 +181,14 @@ pub unsafe extern "C" fn tc_ccm_generation_encryption(
     b[14usize] = (plen >> 8i32) as uint8_t;
     b[15usize] = plen as uint8_t;
     let mut tag = GenericArray::clone_from_slice(&b);
-    (*c.cipher).encrypt_block(&mut tag);
+    c.cipher.encrypt_block(&mut tag);
     if alen > 0i32 as libc::c_uint {
         ccm_cbc_mac(
             tag.as_mut_ptr(),
             associated_data,
             alen,
             1i32 as libc::c_uint,
-            &*c.cipher,
+            &c.cipher,
         );
     }
     if plen > 0i32 as libc::c_uint {
@@ -170,17 +197,17 @@ pub unsafe extern "C" fn tc_ccm_generation_encryption(
             payload,
             plen,
             0i32 as libc::c_uint,
-            &*c.cipher,
+            &c.cipher,
         );
     }
     b[0usize] = 1i32 as uint8_t;
     b[15usize] = 0i32 as uint8_t;
     b[14usize] = b[15usize];
-    ccm_ctr_mode(out, plen, payload, plen, b.as_mut_ptr(), &*c.cipher);
+    ccm_ctr_mode(out, plen, payload, plen, b.as_mut_ptr(), &c.cipher);
     b[15usize] = 0i32 as uint8_t;
     b[14usize] = b[15usize];
     let mut block = GenericArray::from_mut_slice(&mut b);
-    (*c.cipher).encrypt_block(&mut block);
+    c.cipher.encrypt_block(&mut block);
     out = out.offset(plen as isize);
     for i in 0..c.mlen {
         *out = (tag[i as usize] as libc::c_int ^ b[i as usize] as libc::c_int)
@@ -223,13 +250,13 @@ pub unsafe extern "C" fn tc_ccm_decryption_verification(
         payload,
         plen.wrapping_sub(c.mlen),
         b.as_mut_ptr(),
-        &*c.cipher,
+        &c.cipher,
     );
     b[15usize] = 0i32 as uint8_t;
     b[14usize] = b[15usize];
 
     let mut b_ref = GenericArray::from_mut_slice(&mut b);
-    (*c.cipher).encrypt_block(&mut b_ref);
+    c.cipher.encrypt_block(&mut b_ref);
     for i in 0..c.mlen {
         tag[i as usize] = (*payload
             .offset(plen as isize)
@@ -254,14 +281,14 @@ pub unsafe extern "C" fn tc_ccm_decryption_verification(
     b[14usize] = (plen.wrapping_sub(c.mlen) >> 8i32) as uint8_t;
     b[15usize] = plen.wrapping_sub(c.mlen) as uint8_t;
     let mut b_ref = GenericArray::from_mut_slice(&mut b);
-    (*c.cipher).encrypt_block(&mut b_ref);
+    c.cipher.encrypt_block(&mut b_ref);
     if alen > 0i32 as libc::c_uint {
         ccm_cbc_mac(
             b.as_mut_ptr(),
             associated_data,
             alen,
             1i32 as libc::c_uint,
-            &*c.cipher,
+            &c.cipher,
         );
     }
     if plen > 0i32 as libc::c_uint {
@@ -270,7 +297,7 @@ pub unsafe extern "C" fn tc_ccm_decryption_verification(
             out,
             plen.wrapping_sub(c.mlen),
             0i32 as libc::c_uint,
-            &*c.cipher,
+            &c.cipher,
         );
     }
     if &b[..c.mlen as usize] == &tag[..c.mlen as usize] {
