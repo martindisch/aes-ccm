@@ -20,6 +20,7 @@ pub type uint16_t = libc::c_ushort;
 const NB: usize = 4;
 // From tinycrypt/aes.h: number of 32-bit words comprising the key
 const NK: usize = 4;
+const TC_AES_BLOCK_SIZE: usize = NB * NK;
 
 /// The AES-CCM instance.
 pub struct CcmMode<'a> {
@@ -79,62 +80,55 @@ fn ccm_cbc_mac(
     }
 }
 
-/* *
- * Variation of CTR mode used in CCM.
- * The CTR mode used by CCM is slightly different than the conventional CTR
- * mode (the counter is increased before encryption, instead of after
- * encryption). Besides, it is assumed that the counter is stored in the last
- * 2 bytes of the nonce.
- */
-unsafe extern "C" fn ccm_ctr_mode(
-    mut out: *mut uint8_t,
-    mut outlen: libc::c_uint,
-    mut in_0: *const uint8_t,
-    mut inlen: libc::c_uint,
-    mut ctr: *mut uint8_t,
+/// Variation of CTR mode used in CCM.
+///
+/// The CTR mode used by CCM is slightly different than the conventional CTR
+/// mode (the counter is increased before encryption, instead of after
+/// encryption). Besides, it is assumed that the counter is stored in the last
+/// 2 bytes of the nonce.
+fn ccm_ctr_mode(
+    out: &mut [u8],
+    outlen: usize,
+    r#in: &[u8],
+    inlen: usize,
+    ctr: &mut [u8],
     cipher: &Aes128,
-) -> libc::c_int {
-    let mut buffer = [0u8; 16];
-    let mut nonce: [uint8_t; 16] = [0; 16];
-    let mut block_num: uint16_t = 0;
-    let mut i: libc::c_uint = 0;
-    if out.is_null() || in_0 == 0 as *mut uint8_t || ctr.is_null() ||
-           /*sched.is_null() ||*/ inlen == 0i32 as libc::c_uint ||
-           outlen == 0i32 as libc::c_uint || outlen != inlen
-    {
-        return 0i32;
+) -> Result<(), Error> {
+    // Input sanity check
+    if inlen == 0 || outlen == 0 {
+        return Err(Error::EmptyBuf);
     }
-    ::std::ptr::copy_nonoverlapping(
-        ctr,
-        nonce.as_mut_ptr(),
-        ::std::mem::size_of_val(&nonce),
-    );
-    block_num = ((nonce[14usize] as libc::c_int) << 8i32
-        | nonce[15usize] as libc::c_int) as uint16_t;
+    if inlen != outlen {
+        return Err(Error::DifferentLengthBuf);
+    }
+
+    let mut buffer = [0u8; TC_AES_BLOCK_SIZE];
+    let mut nonce = [0u8; TC_AES_BLOCK_SIZE];
+    // Copy the counter to the nonce
+    nonce.copy_from_slice(ctr);
+
+    // Select the last 2 bytes of the nonce to be incremented
+    let mut block_num = (nonce[14] as u16) << 8 | nonce[15] as u16;
     for i in 0..inlen {
-        if i.wrapping_rem((4i32 * 4i32) as libc::c_uint)
-            == 0i32 as libc::c_uint
-        {
-            block_num = block_num.wrapping_add(1);
-            nonce[14usize] = (block_num as libc::c_int >> 8i32) as uint8_t;
-            nonce[15usize] = block_num as uint8_t;
-            // Since we encrypt in-place, copy in the nonce
+        if i % TC_AES_BLOCK_SIZE == 0 {
+            block_num += 1;
+            nonce[14] = (block_num >> 8) as u8;
+            nonce[15] = block_num as u8;
+            // Encrypt the nonce into the buffer
             buffer.copy_from_slice(&nonce);
-            // Create a GenericArray pointing to it
-            let mut buffer_ref = GenericArray::from_mut_slice(&mut buffer);
-            // Pass the array to the cipher, for in-place encryption
-            cipher.encrypt_block(&mut buffer_ref);
+            cipher.encrypt_block(GenericArray::from_mut_slice(&mut buffer));
         }
-        *out = (buffer[i.wrapping_rem((4i32 * 4i32) as libc::c_uint) as usize]
-            as libc::c_int
-            ^ *in_0 as libc::c_int) as uint8_t;
-        in_0 = in_0.offset(1);
-        out = out.offset(1);
+        // Update the output
+        out[i] = buffer[i % TC_AES_BLOCK_SIZE] ^ r#in[i];
     }
-    *ctr.offset(14isize) = nonce[14usize];
-    *ctr.offset(15isize) = nonce[15usize];
-    return 1i32;
+
+    // Update the counter
+    ctr[14] = nonce[14];
+    ctr[15] = nonce[15];
+
+    Ok(())
 }
+
 #[no_mangle]
 pub unsafe extern "C" fn tc_ccm_generation_encryption(
     mut out: *mut uint8_t,
@@ -197,7 +191,15 @@ pub unsafe extern "C" fn tc_ccm_generation_encryption(
     b[0usize] = 1i32 as uint8_t;
     b[15usize] = 0i32 as uint8_t;
     b[14usize] = b[15usize];
-    ccm_ctr_mode(out, plen, payload, plen, b.as_mut_ptr(), &c.cipher);
+    ccm_ctr_mode(
+        std::slice::from_raw_parts_mut(out, plen as usize),
+        plen as usize,
+        std::slice::from_raw_parts(payload, plen as usize),
+        plen as usize,
+        &mut b,
+        &c.cipher,
+    )
+    .unwrap();
     b[15usize] = 0i32 as uint8_t;
     b[14usize] = b[15usize];
     let mut block = GenericArray::from_mut_slice(&mut b);
@@ -239,13 +241,20 @@ pub unsafe extern "C" fn tc_ccm_decryption_verification(
     b[15usize] = 0i32 as uint8_t;
     b[14usize] = b[15usize];
     ccm_ctr_mode(
-        out,
-        plen.wrapping_sub(c.mlen),
-        payload,
-        plen.wrapping_sub(c.mlen),
-        b.as_mut_ptr(),
+        std::slice::from_raw_parts_mut(
+            out,
+            plen.wrapping_sub(c.mlen) as usize,
+        ),
+        plen.wrapping_sub(c.mlen) as usize,
+        std::slice::from_raw_parts(
+            payload,
+            plen.wrapping_sub(c.mlen) as usize,
+        ),
+        plen.wrapping_sub(c.mlen) as usize,
+        &mut b,
         &c.cipher,
-    );
+    )
+    .unwrap();
     b[15usize] = 0i32 as uint8_t;
     b[14usize] = b[15usize];
 
