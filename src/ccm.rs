@@ -16,6 +16,11 @@ use crate::error::Error;
 pub type uint8_t = libc::c_uchar;
 pub type uint16_t = libc::c_ushort;
 
+// From tinycrypt/aes.h: number of columns (32-bit words) comprising the state
+const NB: usize = 4;
+// From tinycrypt/aes.h: number of 32-bit words comprising the key
+const NK: usize = 4;
+
 /// The AES-CCM instance.
 pub struct CcmMode<'a> {
     /// The AES-128 instance to use.
@@ -47,50 +52,33 @@ impl<'a> CcmMode<'a> {
     }
 }
 
-/* *
- * Variation of CBC-MAC mode used in CCM.
- */
-unsafe extern "C" fn ccm_cbc_mac(
-    mut T: *mut uint8_t,
-    mut data: *const uint8_t,
-    mut dlen: libc::c_uint,
-    mut flag: libc::c_uint,
+/// Variation of CBC-MAC mode used in CCM.
+fn ccm_cbc_mac(
+    t: &mut [u8; 16],
+    data: &[u8],
+    mut dlen: usize,
+    flag: bool,
     cipher: &Aes128,
 ) {
-    let mut i: libc::c_uint = 0;
-    if flag > 0i32 as libc::c_uint {
-        let ref mut fresh0 = *T.offset(0isize);
-        *fresh0 = (*fresh0 as libc::c_int
-            ^ (dlen >> 8i32) as uint8_t as libc::c_int)
-            as uint8_t;
-        let ref mut fresh1 = *T.offset(1isize);
-        *fresh1 = (*fresh1 as libc::c_int ^ dlen as uint8_t as libc::c_int)
-            as uint8_t;
-        dlen = dlen.wrapping_add(2i32 as libc::c_uint);
-        i = 2i32 as libc::c_uint
+    let mut i = if flag {
+        t[0] ^= (dlen >> 8) as u8;
+        t[1] ^= dlen as u8;
+        dlen += 2;
+        2
     } else {
-        i = 0i32 as libc::c_uint
-    }
+        0
+    };
+
+    let mut data = data.iter();
     while i < dlen {
-        let fresh3 = i;
-        i = i.wrapping_add(1);
-        let ref mut fresh4 = *T.offset(
-            fresh3.wrapping_rem((4i32 * 4i32) as libc::c_uint) as isize,
-        );
-        let fresh2 = data;
-        data = data.offset(1);
-        *fresh4 = (*fresh4 as libc::c_int ^ *fresh2 as libc::c_int) as uint8_t;
-        if i.wrapping_rem((4i32 * 4i32) as libc::c_uint)
-            == 0i32 as libc::c_uint
-            || dlen == i
-        {
-            let mut t_slice = std::slice::from_raw_parts_mut(T, 16);
-            let mut block = GenericArray::from_mut_slice(t_slice);
-            cipher.encrypt_block(&mut block);
-            let z = std::slice::from_raw_parts(T, 16);
+        t[i % (NB * NK)] ^= data.next().unwrap();
+        i += 1;
+        if i % (NB * NK) == 0 || dlen == i {
+            cipher.encrypt_block(GenericArray::from_mut_slice(t));
         }
     }
 }
+
 /* *
  * Variation of CTR mode used in CCM.
  * The CTR mode used by CCM is slightly different than the conventional CTR
@@ -184,23 +172,25 @@ pub unsafe extern "C" fn tc_ccm_generation_encryption(
     }
     b[14usize] = (plen >> 8i32) as uint8_t;
     b[15usize] = plen as uint8_t;
-    let mut tag = GenericArray::clone_from_slice(&b);
-    c.cipher.encrypt_block(&mut tag);
+    let mut tag = [0; 16];
+    tag.copy_from_slice(&b);
+    let mut tag_ref = GenericArray::from_mut_slice(&mut tag);
+    c.cipher.encrypt_block(&mut tag_ref);
     if alen > 0i32 as libc::c_uint {
         ccm_cbc_mac(
-            tag.as_mut_ptr(),
-            associated_data,
-            alen,
-            1i32 as libc::c_uint,
+            &mut tag,
+            std::slice::from_raw_parts(associated_data, alen as usize),
+            alen as usize,
+            true,
             &c.cipher,
         );
     }
     if plen > 0i32 as libc::c_uint {
         ccm_cbc_mac(
-            tag.as_mut_ptr(),
-            payload,
-            plen,
-            0i32 as libc::c_uint,
+            &mut tag,
+            std::slice::from_raw_parts(payload, plen as usize),
+            plen as usize,
+            false,
             &c.cipher,
         );
     }
@@ -288,19 +278,19 @@ pub unsafe extern "C" fn tc_ccm_decryption_verification(
     c.cipher.encrypt_block(&mut b_ref);
     if alen > 0i32 as libc::c_uint {
         ccm_cbc_mac(
-            b.as_mut_ptr(),
-            associated_data,
-            alen,
-            1i32 as libc::c_uint,
+            &mut b,
+            std::slice::from_raw_parts(associated_data, alen as usize),
+            alen as usize,
+            true,
             &c.cipher,
         );
     }
     if plen > 0i32 as libc::c_uint {
         ccm_cbc_mac(
-            b.as_mut_ptr(),
-            out,
-            plen.wrapping_sub(c.mlen),
-            0i32 as libc::c_uint,
+            &mut b,
+            std::slice::from_raw_parts(out, plen as usize),
+            plen.wrapping_sub(c.mlen) as usize,
+            false,
             &c.cipher,
         );
     }
