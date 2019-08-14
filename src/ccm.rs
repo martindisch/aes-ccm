@@ -35,6 +35,10 @@ impl<'a> CcmMode<'a> {
         nonce: [u8; 13],
         mlen: u32,
     ) -> Result<CcmMode, Error> {
+        if mlen < 4 || mlen > 16 || mlen & 1 != 0 {
+            return Err(Error::InvalidMacLen);
+        }
+
         Ok(CcmMode {
             cipher,
             nonce,

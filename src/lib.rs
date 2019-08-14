@@ -23,6 +23,22 @@ mod tests {
 
     const TC_CCM_MAX_CT_SIZE: usize = 50;
 
+    #[test]
+    fn nonce_len() {
+        let key = hex!("c0c1c2c3c4c5c6c7c8c9cacbcccdcecf");
+        let nonce = hex!("00000003020100a0a1a2a3a4a5");
+        let cipher = Aes128::new(GenericArray::from_slice(&key));
+
+        // Check that only even nonces in [4, 16] are allowed
+        for i in 3..=17 {
+            if i % 2 == 0 {
+                assert!(CcmMode::new(&cipher, nonce, i).is_ok());
+            } else {
+                assert!(CcmMode::new(&cipher, nonce, i).is_err());
+            }
+        }
+    }
+
     /// CCM test #1 (RFC 3610 test vector #1)
     #[test]
     fn test_vector_1() {
