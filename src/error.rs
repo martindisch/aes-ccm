@@ -11,6 +11,10 @@ pub enum Error {
     DifferentLengthBuf,
     /// A buffer is empty.
     EmptyBuf,
+    /// Unsupported size (too large)
+    UnsupportedSize,
+    /// Output buffer too small
+    InvalidOutSize,
 }
 
 impl fmt::Display for Error {
@@ -24,6 +28,10 @@ impl fmt::Display for Error {
                 write!(f, "Out buffer and in buffer are different lengths")
             }
             Error::EmptyBuf => write!(f, "A buffer is empty"),
+            Error::UnsupportedSize => {
+                write!(f, "AD or payload size unsupported")
+            }
+            Error::InvalidOutSize => write!(f, "Invalid output buffer size"),
         }
     }
 }

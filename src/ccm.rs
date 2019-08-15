@@ -16,11 +16,15 @@ use crate::error::Error;
 pub type uint8_t = libc::c_uchar;
 pub type uint16_t = libc::c_ushort;
 
-// From tinycrypt/aes.h: number of columns (32-bit words) comprising the state
+// Number of columns (32-bit words) comprising the state
 const NB: usize = 4;
-// From tinycrypt/aes.h: number of 32-bit words comprising the key
+// Number of 32-bit words comprising the key
 const NK: usize = 4;
 const TC_AES_BLOCK_SIZE: usize = NB * NK;
+// Max additional authenticated size in bytes: 2^16 - 2^8 = 65280
+const TC_CCM_AAD_MAX_BYTES: usize = 0xff00;
+// Max message size in bytes: 2^(8L) = 2^16 = 65536
+const TC_CCM_PAYLOAD_MAX_BYTES: usize = 0x10000;
 
 /// The AES-CCM instance.
 pub struct CcmMode<'a> {
@@ -29,7 +33,7 @@ pub struct CcmMode<'a> {
     /// The 13-byte nonce.
     pub nonce: [u8; 13],
     /// The MAC length in bytes.
-    pub mlen: u32,
+    pub mlen: usize,
 }
 
 impl<'a> CcmMode<'a> {
@@ -39,7 +43,7 @@ impl<'a> CcmMode<'a> {
     pub fn new(
         cipher: &'a Aes128,
         nonce: [u8; 13],
-        mlen: u32,
+        mlen: usize,
     ) -> Result<CcmMode, Error> {
         if mlen < 4 || mlen > 16 || mlen & 1 != 0 {
             return Err(Error::InvalidMacLen);
@@ -129,89 +133,107 @@ fn ccm_ctr_mode(
     Ok(())
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn tc_ccm_generation_encryption(
-    mut out: *mut uint8_t,
-    mut olen: libc::c_uint,
-    mut associated_data: *const uint8_t,
-    mut alen: libc::c_uint,
-    mut payload: *const uint8_t,
-    mut plen: libc::c_uint,
+/// CCM tag generation and encryption procedure.
+///
+/// `out` buffer should be at least (`plen` + `c.mlen`) bytes long.
+///
+/// # Arguments
+/// * `out` - Encrypted data output buffer.
+/// * `olen` - Output length in bytes.
+/// * `associated_data` - Associated data.
+/// * `alen` - Associated data length in bytes.
+/// * `payload` - Payload.
+/// * `plen` - Payload length in bytes.
+/// * `c` - `CcmMode` instance.
+///
+/// # Details
+/// The sequence b for encryption is formatted as follows:
+/// ```text
+/// b = [FLAGS | nonce | counter ], where:
+///   FLAGS is 1 byte long
+///   nonce is 13 bytes long
+///   counter is 2 bytes long
+/// The byte FLAGS is composed by the following 8 bits:
+///   0-2 bits: used to represent the value of q-1
+///   3-7 btis: always 0's
+/// ```
+/// The sequence b for authentication is formatted as follows:
+/// ```text
+/// b = [FLAGS | nonce | length(mac length)], where:
+///   FLAGS is 1 byte long
+///   nonce is 13 bytes long
+///   length(mac length) is 2 bytes long
+/// The byte FLAGS is composed by the following 8 bits:
+///   0-2 bits: used to represent the value of q-1
+///   3-5 bits: mac length (encoded as: (mlen-2)/2)
+///   6: Adata (0 if alen == 0, and 1 otherwise)
+///   7: always 0
+/// ```
+pub fn tc_ccm_generation_encryption(
+    out: &mut [u8],
+    olen: usize,
+    associated_data: &[u8],
+    alen: usize,
+    payload: &[u8],
+    plen: usize,
     c: &CcmMode,
-) -> libc::c_int {
-    if out.is_null() /*|| c.is_null()*/ ||
-           plen > 0i32 as libc::c_uint && payload == 0 as *mut uint8_t ||
-           alen > 0i32 as libc::c_uint && associated_data == 0 as *mut uint8_t
-           || alen >= 0xff00i32 as libc::c_uint ||
-           plen >= 0x10000i32 as libc::c_uint ||
-           olen < plen.wrapping_add(c.mlen)
-    {
-        return 0i32;
+) -> Result<(), Error> {
+    // Input sanity check
+    if alen >= TC_CCM_AAD_MAX_BYTES || plen >= TC_CCM_PAYLOAD_MAX_BYTES {
+        return Err(Error::UnsupportedSize);
     }
-    let mut b: [uint8_t; 16] = [0; 16];
-    let mut tag: [uint8_t; 16] = [0; 16];
-    let mut i: libc::c_uint = 0;
-    b[0usize] = ((if alen > 0i32 as libc::c_uint {
-        0x40i32
-    } else {
-        0i32
-    }) as libc::c_uint
-        | c.mlen
-            .wrapping_sub(2i32 as libc::c_uint)
-            .wrapping_div(2i32 as libc::c_uint)
-            << 3i32
-        | 1i32 as libc::c_uint) as uint8_t;
-    for i in 1..14 {
+    if olen < plen + c.mlen {
+        return Err(Error::InvalidOutSize);
+    }
+
+    let mut b = [0u8; NB * NK];
+    let mut tag = [0u8; NB * NK];
+
+    // Generating the authentication tag --------------------------------------
+
+    // Formatting the sequence b for authentication
+    b[0] = if alen > 0 { 0x40 } else { 0 } | (c.mlen as u8 - 2) / 2 << 3 | 1;
+    for i in 1..=13 {
         b[i] = c.nonce[i - 1];
     }
-    b[14usize] = (plen >> 8i32) as uint8_t;
-    b[15usize] = plen as uint8_t;
-    let mut tag = [0; 16];
+    b[14] = (plen >> 8) as u8;
+    b[15] = plen as u8;
+
+    // Computing the authentication tag using cbc-mac
     tag.copy_from_slice(&b);
-    let mut tag_ref = GenericArray::from_mut_slice(&mut tag);
-    c.cipher.encrypt_block(&mut tag_ref);
-    if alen > 0i32 as libc::c_uint {
-        ccm_cbc_mac(
-            &mut tag,
-            std::slice::from_raw_parts(associated_data, alen as usize),
-            alen as usize,
-            true,
-            &c.cipher,
-        );
+    c.cipher
+        .encrypt_block(GenericArray::from_mut_slice(&mut tag));
+    if alen > 0 {
+        ccm_cbc_mac(&mut tag, associated_data, alen, true, c.cipher);
     }
-    if plen > 0i32 as libc::c_uint {
-        ccm_cbc_mac(
-            &mut tag,
-            std::slice::from_raw_parts(payload, plen as usize),
-            plen as usize,
-            false,
-            &c.cipher,
-        );
+    if plen > 0 {
+        ccm_cbc_mac(&mut tag, payload, plen, false, c.cipher);
     }
-    b[0usize] = 1i32 as uint8_t;
-    b[15usize] = 0i32 as uint8_t;
-    b[14usize] = b[15usize];
-    ccm_ctr_mode(
-        std::slice::from_raw_parts_mut(out, plen as usize),
-        plen as usize,
-        std::slice::from_raw_parts(payload, plen as usize),
-        plen as usize,
-        &mut b,
-        &c.cipher,
-    )
-    .unwrap();
-    b[15usize] = 0i32 as uint8_t;
-    b[14usize] = b[15usize];
-    let mut block = GenericArray::from_mut_slice(&mut b);
-    c.cipher.encrypt_block(&mut block);
-    out = out.offset(plen as isize);
+
+    // Encryption -------------------------------------------------------------
+
+    // Formatting the sequence b for encryption
+    // q - 1 = 2 - 1 = 1
+    b[0] = 1;
+    b[14] = 0x00;
+    b[15] = 0x00;
+
+    // Encrypting payload using ctr mode
+    ccm_ctr_mode(out, plen, payload, plen, &mut b, c.cipher)?;
+
+    // Restoring initial counter for ctr_mode (0)
+    b[14] = 0x00;
+    b[15] = 0x00;
+
+    // Encrypting b and adding the tag to the output
+    c.cipher.encrypt_block(GenericArray::from_mut_slice(&mut b));
     for i in 0..c.mlen {
-        *out = (tag[i as usize] as libc::c_int ^ b[i as usize] as libc::c_int)
-            as uint8_t;
-        out = out.offset(1);
+        out[plen + i] = tag[i] ^ b[i];
     }
-    return 1i32;
+
+    Ok(())
 }
+
 #[no_mangle]
 pub unsafe extern "C" fn tc_ccm_decryption_verification(
     mut out: *mut uint8_t,
@@ -227,7 +249,7 @@ pub unsafe extern "C" fn tc_ccm_decryption_verification(
            alen > 0i32 as libc::c_uint && associated_data == 0 as *mut uint8_t
            || alen >= 0xff00i32 as libc::c_uint ||
            plen >= 0x10000i32 as libc::c_uint ||
-           olen < plen.wrapping_sub(c.mlen)
+           olen < plen.wrapping_sub(c.mlen as u32)
     {
         return 0i32;
     }
@@ -243,14 +265,14 @@ pub unsafe extern "C" fn tc_ccm_decryption_verification(
     ccm_ctr_mode(
         std::slice::from_raw_parts_mut(
             out,
-            plen.wrapping_sub(c.mlen) as usize,
+            plen.wrapping_sub(c.mlen as u32) as usize,
         ),
-        plen.wrapping_sub(c.mlen) as usize,
+        plen.wrapping_sub(c.mlen as u32) as usize,
         std::slice::from_raw_parts(
             payload,
-            plen.wrapping_sub(c.mlen) as usize,
+            plen.wrapping_sub(c.mlen as u32) as usize,
         ),
-        plen.wrapping_sub(c.mlen) as usize,
+        plen.wrapping_sub(c.mlen as u32) as usize,
         &mut b,
         &c.cipher,
     )
@@ -273,7 +295,7 @@ pub unsafe extern "C" fn tc_ccm_decryption_verification(
     } else {
         0i32
     }) as libc::c_uint
-        | c.mlen
+        | (c.mlen as u32)
             .wrapping_sub(2i32 as libc::c_uint)
             .wrapping_div(2i32 as libc::c_uint)
             << 3i32
@@ -281,8 +303,8 @@ pub unsafe extern "C" fn tc_ccm_decryption_verification(
     for i in 1..14 {
         b[i] = c.nonce[i - 1];
     }
-    b[14usize] = (plen.wrapping_sub(c.mlen) >> 8i32) as uint8_t;
-    b[15usize] = plen.wrapping_sub(c.mlen) as uint8_t;
+    b[14usize] = (plen.wrapping_sub(c.mlen as u32) >> 8i32) as uint8_t;
+    b[15usize] = plen.wrapping_sub(c.mlen as u32) as uint8_t;
     let mut b_ref = GenericArray::from_mut_slice(&mut b);
     c.cipher.encrypt_block(&mut b_ref);
     if alen > 0i32 as libc::c_uint {
@@ -298,7 +320,7 @@ pub unsafe extern "C" fn tc_ccm_decryption_verification(
         ccm_cbc_mac(
             &mut b,
             std::slice::from_raw_parts(out, plen as usize),
-            plen.wrapping_sub(c.mlen) as usize,
+            plen.wrapping_sub(c.mlen as u32) as usize,
             false,
             &c.cipher,
         );
@@ -692,7 +714,7 @@ mod tests {
         nonce: [u8; 13],
         hdr: &'a [u8],
         data: &'a [u8],
-        mac_len: u32,
+        mac_len: usize,
         expected: &'a [u8],
     }
 
@@ -701,17 +723,15 @@ mod tests {
         let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
 
         let mut ciphertext = [0u8; TC_CCM_MAX_CT_SIZE];
-        unsafe {
-            tc_ccm_generation_encryption(
-                ciphertext.as_mut_ptr(),
-                TC_CCM_MAX_CT_SIZE as u32,
-                v.hdr.as_ptr(),
-                v.hdr.len() as u32,
-                v.data.as_ptr(),
-                v.data.len() as u32,
-                &ccm,
-            );
-        }
+        tc_ccm_generation_encryption(
+            &mut ciphertext,
+            TC_CCM_MAX_CT_SIZE,
+            &v.hdr,
+            v.hdr.len(),
+            &v.data,
+            v.data.len(),
+            &ccm,
+        ).unwrap();
         assert_eq!(v.expected[..], ciphertext[..v.expected.len()]);
 
         let mut plaintext = [0u8; TC_CCM_MAX_CT_SIZE];
