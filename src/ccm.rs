@@ -193,7 +193,7 @@ pub fn tc_ccm_generation_encryption(
 
     // Formatting the sequence b for authentication
     b[0] = if alen > 0 { 0x40 } else { 0 } | (c.mlen as u8 - 2) / 2 << 3 | 1;
-    for i in 1..=13 {
+    for i in 1..14 {
         b[i] = c.nonce[i - 1];
     }
     b[14] = (plen >> 8) as u8;
@@ -295,14 +295,9 @@ pub fn tc_ccm_decryption_verification(
     // Formatting the sequence b for decryption
     // q - 1 = 2 - 1 = 1
     b[0] = 1;
-    // TODO: more consistency with the other method
     for i in 1..14 {
         b[i] = c.nonce[i - 1];
     }
-    // TODO: this is unnecessary since we already zero-initialize
-    // (also in the other method)
-    b[14] = 0x00;
-    b[15] = 0x00;
 
     // Decrypting payload using ctr mode
     ccm_ctr_mode(
