@@ -22,7 +22,7 @@ const NB: usize = 4;
 const NK: usize = 4;
 const TC_AES_BLOCK_SIZE: usize = NB * NK;
 // Max additional authenticated size in bytes: 2^16 - 2^8 = 65280
-const TC_CCM_AAD_MAX_BYTES: usize = 0xff00;
+const TC_CCM_AAD_MAX_BYTES: usize = 0xFF00;
 // Max message size in bytes: 2^(8L) = 2^16 = 65536
 const TC_CCM_PAYLOAD_MAX_BYTES: usize = 0x10000;
 
@@ -112,7 +112,7 @@ fn ccm_ctr_mode(
     nonce.copy_from_slice(ctr);
 
     // Select the last 2 bytes of the nonce to be incremented
-    let mut block_num = (nonce[14] as u16) << 8 | nonce[15] as u16;
+    let mut block_num = u16::from(nonce[14]) << 8 | u16::from(nonce[15]);
     for i in 0..inlen {
         if i % TC_AES_BLOCK_SIZE == 0 {
             block_num += 1;
@@ -192,10 +192,8 @@ pub fn tc_ccm_generation_encryption(
     // Generating the authentication tag --------------------------------------
 
     // Formatting the sequence b for authentication
-    b[0] = if alen > 0 { 0x40 } else { 0 } | (c.mlen as u8 - 2) / 2 << 3 | 1;
-    for i in 1..14 {
-        b[i] = c.nonce[i - 1];
-    }
+    b[0] = if alen > 0 { 0x40 } else { 0 } | ((c.mlen as u8 - 2) / 2) << 3 | 1;
+    b[1..14].copy_from_slice(&c.nonce[..13]);
     b[14] = (plen >> 8) as u8;
     b[15] = plen as u8;
 
@@ -215,15 +213,15 @@ pub fn tc_ccm_generation_encryption(
     // Formatting the sequence b for encryption
     // q - 1 = 2 - 1 = 1
     b[0] = 1;
-    b[14] = 0x00;
-    b[15] = 0x00;
+    b[14] = 0;
+    b[15] = 0;
 
     // Encrypting payload using ctr mode
     ccm_ctr_mode(out, plen, payload, plen, &mut b, c.cipher)?;
 
     // Restoring initial counter for ctr_mode (0)
-    b[14] = 0x00;
-    b[15] = 0x00;
+    b[14] = 0;
+    b[15] = 0;
 
     // Encrypting b and adding the tag to the output
     c.cipher.encrypt_block(GenericArray::from_mut_slice(&mut b));
@@ -295,9 +293,7 @@ pub fn tc_ccm_decryption_verification(
     // Formatting the sequence b for decryption
     // q - 1 = 2 - 1 = 1
     b[0] = 1;
-    for i in 1..14 {
-        b[i] = c.nonce[i - 1];
-    }
+    b[1..14].copy_from_slice(&c.nonce[..13]);
 
     // Decrypting payload using ctr mode
     ccm_ctr_mode(
@@ -310,8 +306,8 @@ pub fn tc_ccm_decryption_verification(
     )?;
 
     // Restoring initial counter value (0)
-    b[14] = 0x00;
-    b[15] = 0x00;
+    b[14] = 0;
+    b[15] = 0;
 
     // Encrypting b and restoring the tag from input
     c.cipher.encrypt_block(GenericArray::from_mut_slice(&mut b));
@@ -322,11 +318,9 @@ pub fn tc_ccm_decryption_verification(
     // Verifying the authentication tag ---------------------------------------
 
     // Formatting the sequence b for authentication
-    b[0] = if alen > 0 { 0x40 } else { 0 } | (c.mlen as u8 - 2) / 2 << 3 | 1;
-    for i in 1..14 {
-        b[i] = c.nonce[i - 1];
-    }
-    b[14] = (plen - c.mlen >> 8) as u8;
+    b[0] = if alen > 0 { 0x40 } else { 0 } | ((c.mlen as u8 - 2) / 2) << 3 | 1;
+    b[1..14].copy_from_slice(&c.nonce[..13]);
+    b[14] = ((plen - c.mlen) >> 8) as u8;
     b[15] = (plen - c.mlen) as u8;
 
     // Computing the authentication tag using cbc-mac
@@ -339,7 +333,7 @@ pub fn tc_ccm_decryption_verification(
     }
 
     // Comparing the received tag and the computed one
-    if &b[..c.mlen] != &tag[..c.mlen] {
+    if b[..c.mlen] != tag[..c.mlen] {
         return Err(Error::VerificationFailed);
     }
 
