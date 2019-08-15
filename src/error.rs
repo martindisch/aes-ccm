@@ -15,6 +15,8 @@ pub enum Error {
     UnsupportedSize,
     /// Output buffer too small
     InvalidOutSize,
+    /// Received and computed tag don't match
+    VerificationFailed,
 }
 
 impl fmt::Display for Error {
@@ -32,6 +34,7 @@ impl fmt::Display for Error {
                 write!(f, "AD or payload size unsupported")
             }
             Error::InvalidOutSize => write!(f, "Invalid output buffer size"),
+            Error::VerificationFailed => write!(f, "Verification failed"),
         }
     }
 }
