@@ -1,5 +1,5 @@
 [package]
-name = "block-modes"
+name = "aes-ccm"
 version = "0.1.0"
 authors = ["DurandA <arnaud.durand@unifr.ch>", "Martin Disch <martindisch@gmail.com>"]
 license = "MIT OR Apache-2.0"

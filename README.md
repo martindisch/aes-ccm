@@ -1,4 +1,4 @@
-# [WIP] block-modes
+# [WIP] aes-ccm
 An experimental AES-CCM implementation, ported from
 [TinyCrypt](https://github.com/intel/tinycrypt)
 using
