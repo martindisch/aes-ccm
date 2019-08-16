@@ -76,22 +76,8 @@ fn ccm_cbc_mac(t: &mut [u8; 16], data: &[u8], flag: bool, cipher: &Aes128) {
 /// mode (the counter is increased before encryption, instead of after
 /// encryption). Besides, it is assumed that the counter is stored in the last
 /// 2 bytes of the nonce.
-fn ccm_ctr_mode(
-    out: &mut [u8],
-    r#in: &[u8],
-    ctr: &mut [u8],
-    cipher: &Aes128,
-) -> Result<(), Error> {
-    let outlen = out.len();
+fn ccm_ctr_mode(out: &mut [u8], r#in: &[u8], ctr: &mut [u8], cipher: &Aes128) {
     let inlen = r#in.len();
-
-    // Input sanity check
-    if inlen == 0 || outlen == 0 {
-        return Err(Error::EmptyBuf);
-    }
-    if inlen != outlen {
-        return Err(Error::DifferentLengthBuf);
-    }
 
     let mut buffer = [0u8; AES_BLOCK_SIZE];
     let mut nonce = [0u8; AES_BLOCK_SIZE];
@@ -116,8 +102,6 @@ fn ccm_ctr_mode(
     // Update the counter
     ctr[14] = nonce[14];
     ctr[15] = nonce[15];
-
-    Ok(())
 }
 
 /// CCM tag generation and encryption procedure.
@@ -203,7 +187,7 @@ pub fn tc_ccm_generation_encryption<'a>(
     b[15] = 0;
 
     // Encrypting payload using ctr mode
-    ccm_ctr_mode(&mut out[..plen], payload, &mut b, c.cipher)?;
+    ccm_ctr_mode(&mut out[..plen], payload, &mut b, c.cipher);
 
     // Restoring initial counter for ctr_mode (0)
     b[14] = 0;
@@ -286,7 +270,7 @@ pub fn tc_ccm_decryption_verification<'a>(
         &payload[..plen - c.mlen],
         &mut b,
         c.cipher,
-    )?;
+    );
 
     // Restoring initial counter value (0)
     b[14] = 0;
@@ -921,10 +905,11 @@ mod tests {
     fn no_payload() {
         let v = TestVector {
             key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
-            nonce: hex!("00000003020100A0A1A2A3A4A5"),
+            nonce: hex!("0000000B0A0908A0A1A2A3A4A5"),
             hdr: &hex!("0001020304050607"),
-            data: &hex!(""),
-            mac_len: 8,
+            data: &[],
+            mac_len: 10,
+            // Not used
             expected: &[],
         };
 
@@ -932,16 +917,23 @@ mod tests {
         let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
 
         let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
-        assert_eq!(
-            Error::EmptyBuf,
-            tc_ccm_generation_encryption(
-                &mut ciphertext_buf,
-                &v.hdr,
-                &v.data,
-                &ccm,
-            )
-            .unwrap_err()
-        );
+        let ciphertext = tc_ccm_generation_encryption(
+            &mut ciphertext_buf,
+            &v.hdr,
+            &v.data,
+            &ccm,
+        )
+        .unwrap();
+
+        let mut plaintext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
+        let plaintext = tc_ccm_decryption_verification(
+            &mut plaintext_buf,
+            &v.hdr,
+            &ciphertext,
+            &ccm,
+        )
+        .unwrap();
+        assert_eq!(&v.data[..], plaintext);
     }
 
     // Test implementation ----------------------------------------------------

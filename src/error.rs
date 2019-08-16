@@ -7,10 +7,6 @@ use core::fmt;
 pub enum Error {
     /// Wrong MAC length.
     InvalidMacLen,
-    /// Out buffer and in buffer are of unequal length.
-    DifferentLengthBuf,
-    /// A buffer is empty.
-    EmptyBuf,
     /// Unsupported size (too large)
     UnsupportedSize,
     /// Output buffer too small
@@ -26,10 +22,6 @@ impl fmt::Display for Error {
                 f,
                 "Bad MAC length. Allowed sizes are: 4, 6, 8, 10, 12, 14, 16"
             ),
-            Error::DifferentLengthBuf => {
-                write!(f, "Out buffer and in buffer are different lengths")
-            }
-            Error::EmptyBuf => write!(f, "A buffer is empty"),
             Error::UnsupportedSize => {
                 write!(f, "AD or payload size unsupported")
             }
