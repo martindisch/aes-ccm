@@ -1,20 +1,10 @@
 //! AES-CCM implementation.
 
-#![allow(dead_code,
-         mutable_transmutes,
-         non_camel_case_types,
-         non_snake_case,
-         non_upper_case_globals,
-         unused_mut)]
-
 use aes_soft::block_cipher_trait::generic_array::GenericArray;
 use aes_soft::block_cipher_trait::BlockCipher;
 use aes_soft::Aes128;
 
 use crate::error::Error;
-
-pub type uint8_t = libc::c_uchar;
-pub type uint16_t = libc::c_ushort;
 
 // Number of columns (32-bit words) comprising the state
 const NB: usize = 4;

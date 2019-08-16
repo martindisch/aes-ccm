@@ -1,5 +1,4 @@
-#![feature(libc)]
-extern crate libc;
+#![no_std]
 
 #[cfg(test)]
 #[macro_use]
