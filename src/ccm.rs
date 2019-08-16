@@ -122,7 +122,8 @@ fn ccm_ctr_mode(
 
 /// CCM tag generation and encryption procedure.
 ///
-/// `out` buffer slice must be exactly (`payload.len()` + `c.mlen`) bytes long.
+/// `out` buffer must be at least (`payload.len()` + `c.mlen`) bytes long. A
+/// slice to the encrypted output within the buffer will be returned.
 ///
 /// # Arguments
 /// * `out` - Encrypted data output buffer.
@@ -153,12 +154,12 @@ fn ccm_ctr_mode(
 ///   6: Adata (0 if alen == 0, and 1 otherwise)
 ///   7: always 0
 /// ```
-pub fn tc_ccm_generation_encryption(
-    out: &mut [u8],
+pub fn tc_ccm_generation_encryption<'a>(
+    out: &'a mut [u8],
     associated_data: &[u8],
     payload: &[u8],
     c: &CcmMode,
-) -> Result<(), Error> {
+) -> Result<&'a mut [u8], Error> {
     let olen = out.len();
     let alen = associated_data.len();
     let plen = payload.len();
@@ -214,12 +215,13 @@ pub fn tc_ccm_generation_encryption(
         out[plen + i] = tag[i] ^ b[i];
     }
 
-    Ok(())
+    Ok(&mut out[..plen + c.mlen])
 }
 
 /// CCM decryption and tag verification procedure.
 ///
-/// `out` buffer slice must be exactly (`payload.len()` - `c.mlen`) bytes long.
+/// `out` buffer must be at least (`payload.len()` - `c.mlen`) bytes long. A
+/// slice to the decrypted output within the buffer will be returned.
 ///
 /// # Arguments
 /// * `out` - Decrypted data output buffer.
@@ -250,12 +252,12 @@ pub fn tc_ccm_generation_encryption(
 ///   6: Adata (0 if alen == 0, and 1 otherwise)
 ///   7: always 0
 /// ```
-pub fn tc_ccm_decryption_verification(
-    out: &mut [u8],
+pub fn tc_ccm_decryption_verification<'a>(
+    out: &'a mut [u8],
     associated_data: &[u8],
     payload: &[u8],
     c: &CcmMode,
-) -> Result<(), Error> {
+) -> Result<&'a mut [u8], Error> {
     let olen = out.len();
     let alen = associated_data.len();
     let plen = payload.len();
@@ -310,7 +312,7 @@ pub fn tc_ccm_decryption_verification(
         ccm_cbc_mac(&mut b, associated_data, true, c.cipher);
     }
     if plen > 0 {
-        ccm_cbc_mac(&mut b, out, false, c.cipher);
+        ccm_cbc_mac(&mut b, &out[..plen - c.mlen], false, c.cipher);
     }
 
     // Comparing the received tag and the computed one
@@ -318,7 +320,7 @@ pub fn tc_ccm_decryption_verification(
         return Err(Error::VerificationFailed);
     }
 
-    Ok(())
+    Ok(&mut out[..plen - c.mlen])
 }
 
 #[cfg(test)]
@@ -709,15 +711,23 @@ mod tests {
         let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
 
         let mut ciphertext_buf = [0u8; TC_CCM_MAX_CT_SIZE];
-        let ciphertext = &mut ciphertext_buf[..v.data.len() + ccm.mlen];
-        tc_ccm_generation_encryption(ciphertext, &v.hdr, &v.data, &ccm)
-            .unwrap();
+        let ciphertext = tc_ccm_generation_encryption(
+            &mut ciphertext_buf,
+            &v.hdr,
+            &v.data,
+            &ccm,
+        )
+        .unwrap();
         assert_eq!(&v.expected[..], ciphertext);
 
         let mut plaintext_buf = [0u8; TC_CCM_MAX_CT_SIZE];
-        let plaintext = &mut plaintext_buf[..ciphertext.len() - ccm.mlen];
-        tc_ccm_decryption_verification(plaintext, &v.hdr, &ciphertext, &ccm)
-            .unwrap();
+        let plaintext = tc_ccm_decryption_verification(
+            &mut plaintext_buf,
+            &v.hdr,
+            &ciphertext,
+            &ccm,
+        )
+        .unwrap();
         assert_eq!(&v.data[..], plaintext);
     }
 }
