@@ -48,13 +48,9 @@ impl<'a> CcmMode<'a> {
 }
 
 /// Variation of CBC-MAC mode used in CCM.
-fn ccm_cbc_mac(
-    t: &mut [u8; 16],
-    data: &[u8],
-    mut dlen: usize,
-    flag: bool,
-    cipher: &Aes128,
-) {
+fn ccm_cbc_mac(t: &mut [u8; 16], data: &[u8], flag: bool, cipher: &Aes128) {
+    let mut dlen = data.len();
+
     let mut i = if flag {
         t[0] ^= (dlen >> 8) as u8;
         t[1] ^= dlen as u8;
@@ -82,12 +78,13 @@ fn ccm_cbc_mac(
 /// 2 bytes of the nonce.
 fn ccm_ctr_mode(
     out: &mut [u8],
-    outlen: usize,
     r#in: &[u8],
-    inlen: usize,
     ctr: &mut [u8],
     cipher: &Aes128,
 ) -> Result<(), Error> {
+    let outlen = out.len();
+    let inlen = r#in.len();
+
     // Input sanity check
     if inlen == 0 || outlen == 0 {
         return Err(Error::EmptyBuf);
@@ -125,15 +122,12 @@ fn ccm_ctr_mode(
 
 /// CCM tag generation and encryption procedure.
 ///
-/// `out` buffer should be at least (`plen` + `c.mlen`) bytes long.
+/// `out` buffer slice must be exactly (`payload.len()` + `c.mlen`) bytes long.
 ///
 /// # Arguments
 /// * `out` - Encrypted data output buffer.
-/// * `olen` - Output length in bytes.
 /// * `associated_data` - Associated data.
-/// * `alen` - Associated data length in bytes.
 /// * `payload` - Payload.
-/// * `plen` - Payload length in bytes.
 /// * `c` - `CcmMode` instance.
 ///
 /// # Details
@@ -161,13 +155,14 @@ fn ccm_ctr_mode(
 /// ```
 pub fn tc_ccm_generation_encryption(
     out: &mut [u8],
-    olen: usize,
     associated_data: &[u8],
-    alen: usize,
     payload: &[u8],
-    plen: usize,
     c: &CcmMode,
 ) -> Result<(), Error> {
+    let olen = out.len();
+    let alen = associated_data.len();
+    let plen = payload.len();
+
     // Input sanity check
     if alen >= TC_CCM_AAD_MAX_BYTES || plen >= TC_CCM_PAYLOAD_MAX_BYTES {
         return Err(Error::UnsupportedSize);
@@ -192,10 +187,10 @@ pub fn tc_ccm_generation_encryption(
     c.cipher
         .encrypt_block(GenericArray::from_mut_slice(&mut tag));
     if alen > 0 {
-        ccm_cbc_mac(&mut tag, associated_data, alen, true, c.cipher);
+        ccm_cbc_mac(&mut tag, associated_data, true, c.cipher);
     }
     if plen > 0 {
-        ccm_cbc_mac(&mut tag, payload, plen, false, c.cipher);
+        ccm_cbc_mac(&mut tag, payload, false, c.cipher);
     }
 
     // Encryption -------------------------------------------------------------
@@ -207,7 +202,7 @@ pub fn tc_ccm_generation_encryption(
     b[15] = 0;
 
     // Encrypting payload using ctr mode
-    ccm_ctr_mode(out, plen, payload, plen, &mut b, c.cipher)?;
+    ccm_ctr_mode(&mut out[..plen], payload, &mut b, c.cipher)?;
 
     // Restoring initial counter for ctr_mode (0)
     b[14] = 0;
@@ -224,15 +219,12 @@ pub fn tc_ccm_generation_encryption(
 
 /// CCM decryption and tag verification procedure.
 ///
-/// `out` buffer should be at least (`plen` - `c.mlen`) bytes long.
+/// `out` buffer slice must be exactly (`payload.len()` - `c.mlen`) bytes long.
 ///
 /// # Arguments
 /// * `out` - Decrypted data output buffer.
-/// * `olen` - Output length in bytes.
 /// * `associated_data` - Associated data.
-/// * `alen` - Associated data length in bytes.
 /// * `payload` - Payload.
-/// * `plen` - Payload length in bytes.
 /// * `c` - `CcmMode` instance.
 ///
 /// # Details
@@ -260,13 +252,14 @@ pub fn tc_ccm_generation_encryption(
 /// ```
 pub fn tc_ccm_decryption_verification(
     out: &mut [u8],
-    olen: usize,
     associated_data: &[u8],
-    alen: usize,
     payload: &[u8],
-    plen: usize,
     c: &CcmMode,
 ) -> Result<(), Error> {
+    let olen = out.len();
+    let alen = associated_data.len();
+    let plen = payload.len();
+
     // Input sanity check
     if alen >= TC_CCM_AAD_MAX_BYTES || plen >= TC_CCM_PAYLOAD_MAX_BYTES {
         return Err(Error::UnsupportedSize);
@@ -287,10 +280,8 @@ pub fn tc_ccm_decryption_verification(
 
     // Decrypting payload using ctr mode
     ccm_ctr_mode(
-        out,
-        plen - c.mlen,
-        payload,
-        plen - c.mlen,
+        &mut out[..plen - c.mlen],
+        &payload[..plen - c.mlen],
         &mut b,
         c.cipher,
     )?;
@@ -316,10 +307,10 @@ pub fn tc_ccm_decryption_verification(
     // Computing the authentication tag using cbc-mac
     c.cipher.encrypt_block(GenericArray::from_mut_slice(&mut b));
     if alen > 0 {
-        ccm_cbc_mac(&mut b, associated_data, alen, true, c.cipher);
+        ccm_cbc_mac(&mut b, associated_data, true, c.cipher);
     }
     if plen > 0 {
-        ccm_cbc_mac(&mut b, out, plen - c.mlen, false, c.cipher);
+        ccm_cbc_mac(&mut b, out, false, c.cipher);
     }
 
     // Comparing the received tag and the computed one
@@ -717,30 +708,16 @@ mod tests {
         let cipher = Aes128::new(GenericArray::from_slice(&v.key));
         let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
 
-        let mut ciphertext = [0u8; TC_CCM_MAX_CT_SIZE];
-        tc_ccm_generation_encryption(
-            &mut ciphertext,
-            TC_CCM_MAX_CT_SIZE,
-            &v.hdr,
-            v.hdr.len(),
-            &v.data,
-            v.data.len(),
-            &ccm,
-        )
-        .unwrap();
-        assert_eq!(v.expected[..], ciphertext[..v.expected.len()]);
+        let mut ciphertext_buf = [0u8; TC_CCM_MAX_CT_SIZE];
+        let ciphertext = &mut ciphertext_buf[..v.data.len() + ccm.mlen];
+        tc_ccm_generation_encryption(ciphertext, &v.hdr, &v.data, &ccm)
+            .unwrap();
+        assert_eq!(&v.expected[..], ciphertext);
 
-        let mut plaintext = [0u8; TC_CCM_MAX_CT_SIZE];
-        tc_ccm_decryption_verification(
-            &mut plaintext,
-            TC_CCM_MAX_CT_SIZE,
-            &v.hdr,
-            v.hdr.len(),
-            &ciphertext,
-            v.expected.len(),
-            &ccm,
-        )
-        .unwrap();
-        assert_eq!(v.data, &plaintext[..v.data.len()]);
+        let mut plaintext_buf = [0u8; TC_CCM_MAX_CT_SIZE];
+        let plaintext = &mut plaintext_buf[..ciphertext.len() - ccm.mlen];
+        tc_ccm_decryption_verification(plaintext, &v.hdr, &ciphertext, &ccm)
+            .unwrap();
+        assert_eq!(&v.data[..], plaintext);
     }
 }
