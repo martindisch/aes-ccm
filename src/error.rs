@@ -3,7 +3,7 @@
 use core::fmt;
 
 /// The error type for AES-CCM.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Error {
     /// Wrong MAC length.
     InvalidMacLen,

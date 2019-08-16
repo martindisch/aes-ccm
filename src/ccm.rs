@@ -327,23 +327,7 @@ pub fn tc_ccm_decryption_verification<'a>(
 mod tests {
     use super::*;
 
-    const TC_CCM_MAX_CT_SIZE: usize = 50;
-
-    #[test]
-    fn nonce_len() {
-        let key = hex!("c0c1c2c3c4c5c6c7c8c9cacbcccdcecf");
-        let nonce = hex!("00000003020100a0a1a2a3a4a5");
-        let cipher = Aes128::new(GenericArray::from_slice(&key));
-
-        // Check that only even nonces in [4, 16] are allowed
-        for i in 3..=17 {
-            if i % 2 == 0 {
-                assert!(CcmMode::new(&cipher, nonce, i).is_ok());
-            } else {
-                assert!(CcmMode::new(&cipher, nonce, i).is_err());
-            }
-        }
-    }
+    const TEST_CCM_MAX_CT_SIZE: usize = 50;
 
     // RFC 3610 test vectors --------------------------------------------------
 
@@ -697,6 +681,271 @@ mod tests {
         });
     }
 
+    // Assorted other tests ---------------------------------------------------
+
+    #[test]
+    fn nonce_len() {
+        let key = hex!("c0c1c2c3c4c5c6c7c8c9cacbcccdcecf");
+        let nonce = hex!("00000003020100a0a1a2a3a4a5");
+        let cipher = Aes128::new(GenericArray::from_slice(&key));
+
+        // Check that only even nonces in [4, 16] are allowed
+        for i in 3..=17 {
+            if i % 2 == 0 {
+                assert!(CcmMode::new(&cipher, nonce, i).is_ok());
+            } else {
+                assert!(CcmMode::new(&cipher, nonce, i).is_err());
+            }
+        }
+    }
+
+    #[test]
+    fn encryption_sanity() {
+        // Testing for too small out buffer
+        let v = TestVector {
+            key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
+            nonce: hex!("00000003020100A0A1A2A3A4A5"),
+            hdr: &hex!("0001020304050607"),
+            data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E"),
+            mac_len: 8,
+            expected: &hex!(
+                "588C979A61C663D2F066D0C2C0F9898
+                06D5F6B61DAC38417E8D12CFDF926E0"
+            ),
+        };
+        let cipher = Aes128::new(GenericArray::from_slice(&v.key));
+        let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
+        // Create an out buffer 1 byte smaller than it needs to be
+        let mut ciphertext_buf = [0u8; 23 + 7];
+        assert_eq!(
+            Error::InvalidOutSize,
+            tc_ccm_generation_encryption(
+                &mut ciphertext_buf,
+                &v.hdr,
+                &v.data,
+                &ccm,
+            )
+            .unwrap_err()
+        );
+
+        // Testing for too large associated data
+        let v = TestVector {
+            key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
+            nonce: hex!("00000003020100A0A1A2A3A4A5"),
+            // This is above the maximum allowed size
+            hdr: &[0u8; 66000],
+            data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E"),
+            mac_len: 8,
+            expected: &hex!(
+                "588C979A61C663D2F066D0C2C0F9898
+                06D5F6B61DAC38417E8D12CFDF926E0"
+            ),
+        };
+        let cipher = Aes128::new(GenericArray::from_slice(&v.key));
+        let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
+        let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
+        assert_eq!(
+            Error::UnsupportedSize,
+            tc_ccm_generation_encryption(
+                &mut ciphertext_buf,
+                &v.hdr,
+                &v.data,
+                &ccm,
+            )
+            .unwrap_err()
+        );
+    }
+
+    #[test]
+    fn decryption_sanity() {
+        // Testing for too small out buffer
+        let v = TestVector {
+            key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
+            nonce: hex!("00000003020100A0A1A2A3A4A5"),
+            hdr: &hex!("0001020304050607"),
+            data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E"),
+            mac_len: 8,
+            expected: &hex!(
+                "588C979A61C663D2F066D0C2C0F9898
+                06D5F6B61DAC38417E8D12CFDF926E0"
+            ),
+        };
+        let cipher = Aes128::new(GenericArray::from_slice(&v.key));
+        let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
+        let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
+        let ciphertext = tc_ccm_generation_encryption(
+            &mut ciphertext_buf,
+            &v.hdr,
+            &v.data,
+            &ccm,
+        )
+        .unwrap();
+        // This is 1 byte smaller than it needs to be
+        let mut plaintext_buf = [0u8; 22];
+        assert_eq!(
+            Error::InvalidOutSize,
+            tc_ccm_decryption_verification(
+                &mut plaintext_buf,
+                &v.hdr,
+                &ciphertext,
+                &ccm,
+            )
+            .unwrap_err()
+        );
+
+        // Testing for too large associated data
+        let v = TestVector {
+            key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
+            nonce: hex!("00000003020100A0A1A2A3A4A5"),
+            hdr: &hex!("0001020304050607"),
+            data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E"),
+            mac_len: 8,
+            expected: &hex!(
+                "588C979A61C663D2F066D0C2C0F9898
+                06D5F6B61DAC38417E8D12CFDF926E0"
+            ),
+        };
+        let cipher = Aes128::new(GenericArray::from_slice(&v.key));
+        let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
+        let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
+        let ciphertext = tc_ccm_generation_encryption(
+            &mut ciphertext_buf,
+            &v.hdr,
+            &v.data,
+            &ccm,
+        )
+        .unwrap();
+        let mut plaintext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
+        assert_eq!(
+            Error::UnsupportedSize,
+            tc_ccm_decryption_verification(
+                &mut plaintext_buf,
+                // This is above the maximum allowed size
+                &[0u8; 66000],
+                &ciphertext,
+                &ccm,
+            )
+            .unwrap_err()
+        );
+    }
+
+    #[test]
+    fn verification_fail() {
+        let v = TestVector {
+            key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
+            nonce: hex!("00000003020100A0A1A2A3A4A5"),
+            hdr: &hex!("0001020304050607"),
+            data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E"),
+            mac_len: 8,
+            expected: &hex!(
+                "588C979A61C663D2F066D0C2C0F9898
+                06D5F6B61DAC38417E8D12CFDF926E0"
+            ),
+        };
+
+        let cipher = Aes128::new(GenericArray::from_slice(&v.key));
+        let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
+        let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
+        let ciphertext = tc_ccm_generation_encryption(
+            &mut ciphertext_buf,
+            &v.hdr,
+            &v.data,
+            &ccm,
+        )
+        .unwrap();
+
+        let mut plaintext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
+        assert_eq!(
+            Error::VerificationFailed,
+            tc_ccm_decryption_verification(
+                &mut plaintext_buf,
+                // This associated data has been tampered with
+                &hex!("0001020304050608"),
+                &ciphertext,
+                &ccm,
+            )
+            .unwrap_err()
+        );
+        // Tamper with the ciphertext
+        ciphertext[10] = 0xFF;
+        assert_eq!(
+            Error::VerificationFailed,
+            tc_ccm_decryption_verification(
+                &mut plaintext_buf,
+                &v.hdr,
+                &ciphertext,
+                &ccm,
+            )
+            .unwrap_err()
+        );
+    }
+
+    #[test]
+    fn no_ad() {
+        let v = TestVector {
+            key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
+            nonce: hex!("00000003020100A0A1A2A3A4A5"),
+            // No associated data
+            hdr: &[],
+            data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E"),
+            mac_len: 8,
+            expected: &hex!(
+                "588C979A61C663D2F066D0C2C0F9898
+                06D5F6B61DAC38417E8D12CFDF926E0"
+            ),
+        };
+
+        let cipher = Aes128::new(GenericArray::from_slice(&v.key));
+        let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
+        let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
+        let ciphertext = tc_ccm_generation_encryption(
+            &mut ciphertext_buf,
+            &v.hdr,
+            &v.data,
+            &ccm,
+        )
+        .unwrap();
+
+        let mut plaintext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
+        let plaintext = tc_ccm_decryption_verification(
+            &mut plaintext_buf,
+            &v.hdr,
+            &ciphertext,
+            &ccm,
+        )
+        .unwrap();
+        assert_eq!(&v.data[..], plaintext);
+    }
+
+    #[test]
+    fn no_payload() {
+        let v = TestVector {
+            key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
+            nonce: hex!("00000003020100A0A1A2A3A4A5"),
+            hdr: &hex!("0001020304050607"),
+            data: &hex!(""),
+            mac_len: 8,
+            expected: &[],
+        };
+
+        let cipher = Aes128::new(GenericArray::from_slice(&v.key));
+        let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
+
+        let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
+        assert_eq!(
+            Error::EmptyBuf,
+            tc_ccm_generation_encryption(
+                &mut ciphertext_buf,
+                &v.hdr,
+                &v.data,
+                &ccm,
+            )
+            .unwrap_err()
+        );
+    }
+
+    // Test implementation ----------------------------------------------------
+
     struct TestVector<'a> {
         key: [u8; 16],
         nonce: [u8; 13],
@@ -710,7 +959,7 @@ mod tests {
         let cipher = Aes128::new(GenericArray::from_slice(&v.key));
         let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
 
-        let mut ciphertext_buf = [0u8; TC_CCM_MAX_CT_SIZE];
+        let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         let ciphertext = tc_ccm_generation_encryption(
             &mut ciphertext_buf,
             &v.hdr,
@@ -720,7 +969,7 @@ mod tests {
         .unwrap();
         assert_eq!(&v.expected[..], ciphertext);
 
-        let mut plaintext_buf = [0u8; TC_CCM_MAX_CT_SIZE];
+        let mut plaintext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         let plaintext = tc_ccm_decryption_verification(
             &mut plaintext_buf,
             &v.hdr,
