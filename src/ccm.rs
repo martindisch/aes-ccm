@@ -10,11 +10,11 @@ use crate::error::Error;
 const NB: usize = 4;
 // Number of 32-bit words comprising the key
 const NK: usize = 4;
-const TC_AES_BLOCK_SIZE: usize = NB * NK;
+const AES_BLOCK_SIZE: usize = NB * NK;
 // Max additional authenticated size in bytes: 2^16 - 2^8 = 65280
-const TC_CCM_AAD_MAX_BYTES: usize = 0xFF00;
+const CCM_AAD_MAX_BYTES: usize = 0xFF00;
 // Max message size in bytes: 2^(8L) = 2^16 = 65536
-const TC_CCM_PAYLOAD_MAX_BYTES: usize = 0x10000;
+const CCM_PAYLOAD_MAX_BYTES: usize = 0x10000;
 
 /// The AES-CCM instance.
 pub struct CcmMode<'a> {
@@ -62,9 +62,9 @@ fn ccm_cbc_mac(t: &mut [u8; 16], data: &[u8], flag: bool, cipher: &Aes128) {
 
     let mut data = data.iter();
     while i < dlen {
-        t[i % (NB * NK)] ^= data.next().unwrap();
+        t[i % AES_BLOCK_SIZE] ^= data.next().unwrap();
         i += 1;
-        if i % (NB * NK) == 0 || dlen == i {
+        if i % AES_BLOCK_SIZE == 0 || dlen == i {
             cipher.encrypt_block(GenericArray::from_mut_slice(t));
         }
     }
@@ -93,15 +93,15 @@ fn ccm_ctr_mode(
         return Err(Error::DifferentLengthBuf);
     }
 
-    let mut buffer = [0u8; TC_AES_BLOCK_SIZE];
-    let mut nonce = [0u8; TC_AES_BLOCK_SIZE];
+    let mut buffer = [0u8; AES_BLOCK_SIZE];
+    let mut nonce = [0u8; AES_BLOCK_SIZE];
     // Copy the counter to the nonce
     nonce.copy_from_slice(ctr);
 
     // Select the last 2 bytes of the nonce to be incremented
     let mut block_num = u16::from(nonce[14]) << 8 | u16::from(nonce[15]);
     for i in 0..inlen {
-        if i % TC_AES_BLOCK_SIZE == 0 {
+        if i % AES_BLOCK_SIZE == 0 {
             block_num += 1;
             nonce[14] = (block_num >> 8) as u8;
             nonce[15] = block_num as u8;
@@ -110,7 +110,7 @@ fn ccm_ctr_mode(
             cipher.encrypt_block(GenericArray::from_mut_slice(&mut buffer));
         }
         // Update the output
-        out[i] = buffer[i % TC_AES_BLOCK_SIZE] ^ r#in[i];
+        out[i] = buffer[i % AES_BLOCK_SIZE] ^ r#in[i];
     }
 
     // Update the counter
@@ -165,15 +165,15 @@ pub fn tc_ccm_generation_encryption<'a>(
     let plen = payload.len();
 
     // Input sanity check
-    if alen >= TC_CCM_AAD_MAX_BYTES || plen >= TC_CCM_PAYLOAD_MAX_BYTES {
+    if alen >= CCM_AAD_MAX_BYTES || plen >= CCM_PAYLOAD_MAX_BYTES {
         return Err(Error::UnsupportedSize);
     }
     if olen < plen + c.mlen {
         return Err(Error::InvalidOutSize);
     }
 
-    let mut b = [0u8; NB * NK];
-    let mut tag = [0u8; NB * NK];
+    let mut b = [0u8; AES_BLOCK_SIZE];
+    let mut tag = [0u8; AES_BLOCK_SIZE];
 
     // Generating the authentication tag --------------------------------------
 
@@ -263,15 +263,15 @@ pub fn tc_ccm_decryption_verification<'a>(
     let plen = payload.len();
 
     // Input sanity check
-    if alen >= TC_CCM_AAD_MAX_BYTES || plen >= TC_CCM_PAYLOAD_MAX_BYTES {
+    if alen >= CCM_AAD_MAX_BYTES || plen >= CCM_PAYLOAD_MAX_BYTES {
         return Err(Error::UnsupportedSize);
     }
     if olen < plen - c.mlen {
         return Err(Error::InvalidOutSize);
     }
 
-    let mut b = [0u8; NB * NK];
-    let mut tag = [0u8; NB * NK];
+    let mut b = [0u8; AES_BLOCK_SIZE];
+    let mut tag = [0u8; AES_BLOCK_SIZE];
 
     // Decryption -------------------------------------------------------------
 
