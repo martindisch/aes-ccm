@@ -868,15 +868,13 @@ mod tests {
     fn no_ad() {
         let v = TestVector {
             key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
-            nonce: hex!("00000003020100A0A1A2A3A4A5"),
+            nonce: hex!("0000000B0A0908A0A1A2A3A4A5"),
             // No associated data
             hdr: &[],
-            data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E"),
-            mac_len: 8,
-            expected: &hex!(
-                "588C979A61C663D2F066D0C2C0F9898
-                06D5F6B61DAC38417E8D12CFDF926E0"
-            ),
+            data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F20"),
+            mac_len: 10,
+            // Not used
+            expected: &[],
         };
 
         let cipher = Aes128::new(GenericArray::from_slice(&v.key));
