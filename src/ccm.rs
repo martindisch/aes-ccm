@@ -80,7 +80,7 @@ impl<'a> CcmMode<'a> {
     ///   6: Adata (0 if alen == 0, and 1 otherwise)
     ///   7: always 0
     /// ```
-    pub fn tc_ccm_generation_encryption<'b>(
+    pub fn generate_encrypt<'b>(
         &self,
         out: &'b mut [u8],
         associated_data: &[u8],
@@ -181,7 +181,7 @@ impl<'a> CcmMode<'a> {
     ///   6: Adata (0 if alen == 0, and 1 otherwise)
     ///   7: always 0
     /// ```
-    pub fn tc_ccm_decryption_verification<'b>(
+    pub fn decrypt_verify<'b>(
         &self,
         out: &'b mut [u8],
         associated_data: &[u8],
@@ -710,12 +710,8 @@ mod tests {
         let mut ciphertext_buf = [0u8; 23 + 7];
         assert_eq!(
             Error::InvalidOutSize,
-            ccm.tc_ccm_generation_encryption(
-                &mut ciphertext_buf,
-                &v.hdr,
-                &v.data,
-            )
-            .unwrap_err()
+            ccm.generate_encrypt(&mut ciphertext_buf, &v.hdr, &v.data,)
+                .unwrap_err()
         );
 
         // Testing for too large associated data
@@ -736,12 +732,8 @@ mod tests {
         let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         assert_eq!(
             Error::UnsupportedSize,
-            ccm.tc_ccm_generation_encryption(
-                &mut ciphertext_buf,
-                &v.hdr,
-                &v.data,
-            )
-            .unwrap_err()
+            ccm.generate_encrypt(&mut ciphertext_buf, &v.hdr, &v.data,)
+                .unwrap_err()
         );
     }
 
@@ -763,18 +755,14 @@ mod tests {
         let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
         let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         let ciphertext = ccm
-            .tc_ccm_generation_encryption(&mut ciphertext_buf, &v.hdr, &v.data)
+            .generate_encrypt(&mut ciphertext_buf, &v.hdr, &v.data)
             .unwrap();
         // This is 1 byte smaller than it needs to be
         let mut plaintext_buf = [0u8; 22];
         assert_eq!(
             Error::InvalidOutSize,
-            ccm.tc_ccm_decryption_verification(
-                &mut plaintext_buf,
-                &v.hdr,
-                &ciphertext,
-            )
-            .unwrap_err()
+            ccm.decrypt_verify(&mut plaintext_buf, &v.hdr, &ciphertext,)
+                .unwrap_err()
         );
 
         // Testing for too large associated data
@@ -793,12 +781,12 @@ mod tests {
         let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
         let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         let ciphertext = ccm
-            .tc_ccm_generation_encryption(&mut ciphertext_buf, &v.hdr, &v.data)
+            .generate_encrypt(&mut ciphertext_buf, &v.hdr, &v.data)
             .unwrap();
         let mut plaintext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         assert_eq!(
             Error::UnsupportedSize,
-            ccm.tc_ccm_decryption_verification(
+            ccm.decrypt_verify(
                 &mut plaintext_buf,
                 // This is above the maximum allowed size
                 &[0u8; 66000],
@@ -826,13 +814,13 @@ mod tests {
         let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
         let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         let ciphertext = ccm
-            .tc_ccm_generation_encryption(&mut ciphertext_buf, &v.hdr, &v.data)
+            .generate_encrypt(&mut ciphertext_buf, &v.hdr, &v.data)
             .unwrap();
 
         let mut plaintext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         assert_eq!(
             Error::VerificationFailed,
-            ccm.tc_ccm_decryption_verification(
+            ccm.decrypt_verify(
                 &mut plaintext_buf,
                 // This associated data has been tampered with
                 &hex!("0001020304050608"),
@@ -844,12 +832,8 @@ mod tests {
         ciphertext[10] = 0xFF;
         assert_eq!(
             Error::VerificationFailed,
-            ccm.tc_ccm_decryption_verification(
-                &mut plaintext_buf,
-                &v.hdr,
-                &ciphertext,
-            )
-            .unwrap_err()
+            ccm.decrypt_verify(&mut plaintext_buf, &v.hdr, &ciphertext,)
+                .unwrap_err()
         );
     }
 
@@ -870,16 +854,12 @@ mod tests {
         let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
         let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         let ciphertext = ccm
-            .tc_ccm_generation_encryption(&mut ciphertext_buf, &v.hdr, &v.data)
+            .generate_encrypt(&mut ciphertext_buf, &v.hdr, &v.data)
             .unwrap();
 
         let mut plaintext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         let plaintext = ccm
-            .tc_ccm_decryption_verification(
-                &mut plaintext_buf,
-                &v.hdr,
-                &ciphertext,
-            )
+            .decrypt_verify(&mut plaintext_buf, &v.hdr, &ciphertext)
             .unwrap();
         assert_eq!(&v.data[..], plaintext);
     }
@@ -901,16 +881,12 @@ mod tests {
 
         let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         let ciphertext = ccm
-            .tc_ccm_generation_encryption(&mut ciphertext_buf, &v.hdr, &v.data)
+            .generate_encrypt(&mut ciphertext_buf, &v.hdr, &v.data)
             .unwrap();
 
         let mut plaintext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         let plaintext = ccm
-            .tc_ccm_decryption_verification(
-                &mut plaintext_buf,
-                &v.hdr,
-                &ciphertext,
-            )
+            .decrypt_verify(&mut plaintext_buf, &v.hdr, &ciphertext)
             .unwrap();
         assert_eq!(&v.data[..], plaintext);
     }
@@ -932,17 +908,13 @@ mod tests {
 
         let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         let ciphertext = ccm
-            .tc_ccm_generation_encryption(&mut ciphertext_buf, &v.hdr, &v.data)
+            .generate_encrypt(&mut ciphertext_buf, &v.hdr, &v.data)
             .unwrap();
         assert_eq!(&v.expected[..], ciphertext);
 
         let mut plaintext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         let plaintext = ccm
-            .tc_ccm_decryption_verification(
-                &mut plaintext_buf,
-                &v.hdr,
-                &ciphertext,
-            )
+            .decrypt_verify(&mut plaintext_buf, &v.hdr, &ciphertext)
             .unwrap();
         assert_eq!(&v.data[..], plaintext);
     }
