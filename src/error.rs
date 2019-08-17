@@ -5,13 +5,13 @@ use core::fmt;
 /// The error type for AES-CCM.
 #[derive(Debug, PartialEq)]
 pub enum Error {
-    /// Wrong MAC length.
+    /// Bad MAC length. Allowed sizes are: 4, 6, 8, 10, 12, 14, 16.
     InvalidMacLen,
-    /// Unsupported size (too large)
+    /// Input (associated data or payload) is larger than allowed.
     UnsupportedSize,
-    /// Output buffer too small
+    /// Output buffer is too small.
     InvalidOutSize,
-    /// Received and computed tag don't match
+    /// Received and computed tag don't match.
     VerificationFailed,
 }
 
@@ -22,11 +22,14 @@ impl fmt::Display for Error {
                 f,
                 "Bad MAC length. Allowed sizes are: 4, 6, 8, 10, 12, 14, 16"
             ),
-            Error::UnsupportedSize => {
-                write!(f, "AD or payload size unsupported")
+            Error::UnsupportedSize => write!(
+                f,
+                "Input (associated data or payload) is larger than allowed"
+            ),
+            Error::InvalidOutSize => write!(f, "Output buffer is too small"),
+            Error::VerificationFailed => {
+                write!(f, "Received and computed tag don't match")
             }
-            Error::InvalidOutSize => write!(f, "Invalid output buffer size"),
-            Error::VerificationFailed => write!(f, "Verification failed"),
         }
     }
 }
