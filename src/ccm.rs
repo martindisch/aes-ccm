@@ -17,21 +17,22 @@ const CCM_AAD_MAX_BYTES: usize = 0xFF00;
 const CCM_PAYLOAD_MAX_BYTES: usize = 0x10000;
 
 /// The AES-CCM instance.
-pub struct CcmMode<'a> {
+pub struct CcmMode {
     /// The AES-128 instance to use.
-    pub cipher: &'a Aes128,
+    cipher: Aes128,
     /// The 13-byte nonce.
-    pub nonce: [u8; 13],
+    nonce: [u8; 13],
     /// The MAC length in bytes.
-    pub mlen: usize,
+    mlen: usize,
 }
 
-impl<'a> CcmMode<'a> {
+impl CcmMode {
     /// Creates a new `CcmMode`.
     ///
     /// Valid `mlen` values are: 4, 6, 8, 10, 12, 14, 16.
+    /// The nonce is consumed to prevent reuse, which would destroy security.
     pub fn new(
-        cipher: &'a Aes128,
+        key: &[u8; 16],
         nonce: [u8; 13],
         mlen: usize,
     ) -> Result<CcmMode, Error> {
@@ -40,7 +41,7 @@ impl<'a> CcmMode<'a> {
         }
 
         Ok(CcmMode {
-            cipher,
+            cipher: Aes128::new(GenericArray::from_slice(key)),
             nonce,
             mlen,
         })
@@ -116,10 +117,10 @@ impl<'a> CcmMode<'a> {
         self.cipher
             .encrypt_block(GenericArray::from_mut_slice(&mut tag));
         if alen > 0 {
-            ccm_cbc_mac(&mut tag, associated_data, true, self.cipher);
+            ccm_cbc_mac(&mut tag, associated_data, true, &self.cipher);
         }
         if plen > 0 {
-            ccm_cbc_mac(&mut tag, payload, false, self.cipher);
+            ccm_cbc_mac(&mut tag, payload, false, &self.cipher);
         }
 
         // Encryption ---------------------------------------------------------
@@ -131,7 +132,7 @@ impl<'a> CcmMode<'a> {
         b[15] = 0;
 
         // Encrypting payload using ctr mode
-        ccm_ctr_mode(&mut out[..plen], payload, &mut b, self.cipher);
+        ccm_ctr_mode(&mut out[..plen], payload, &mut b, &self.cipher);
 
         // Restoring initial counter for ctr_mode (0)
         b[14] = 0;
@@ -214,7 +215,7 @@ impl<'a> CcmMode<'a> {
             &mut out[..plen - self.mlen],
             &payload[..plen - self.mlen],
             &mut b,
-            self.cipher,
+            &self.cipher,
         );
 
         // Restoring initial counter value (0)
@@ -242,10 +243,10 @@ impl<'a> CcmMode<'a> {
         self.cipher
             .encrypt_block(GenericArray::from_mut_slice(&mut b));
         if alen > 0 {
-            ccm_cbc_mac(&mut b, associated_data, true, self.cipher);
+            ccm_cbc_mac(&mut b, associated_data, true, &self.cipher);
         }
         if plen > 0 {
-            ccm_cbc_mac(&mut b, &out[..plen - self.mlen], false, self.cipher);
+            ccm_cbc_mac(&mut b, &out[..plen - self.mlen], false, &self.cipher);
         }
 
         // Comparing the received tag and the computed one
@@ -678,14 +679,13 @@ mod tests {
     fn nonce_len() {
         let key = hex!("c0c1c2c3c4c5c6c7c8c9cacbcccdcecf");
         let nonce = hex!("00000003020100a0a1a2a3a4a5");
-        let cipher = Aes128::new(GenericArray::from_slice(&key));
 
         // Check that only even nonces in [4, 16] are allowed
         for i in 3..=17 {
             if i % 2 == 0 {
-                assert!(CcmMode::new(&cipher, nonce, i).is_ok());
+                assert!(CcmMode::new(&key, nonce, i).is_ok());
             } else {
-                assert!(CcmMode::new(&cipher, nonce, i).is_err());
+                assert!(CcmMode::new(&key, nonce, i).is_err());
             }
         }
     }
@@ -704,8 +704,7 @@ mod tests {
                 06D5F6B61DAC38417E8D12CFDF926E0"
             ),
         };
-        let cipher = Aes128::new(GenericArray::from_slice(&v.key));
-        let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
+        let ccm = CcmMode::new(&v.key, v.nonce, v.mac_len).unwrap();
         // Create an out buffer 1 byte smaller than it needs to be
         let mut ciphertext_buf = [0u8; 23 + 7];
         assert_eq!(
@@ -727,8 +726,7 @@ mod tests {
                 06D5F6B61DAC38417E8D12CFDF926E0"
             ),
         };
-        let cipher = Aes128::new(GenericArray::from_slice(&v.key));
-        let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
+        let ccm = CcmMode::new(&v.key, v.nonce, v.mac_len).unwrap();
         let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         assert_eq!(
             Error::UnsupportedSize,
@@ -751,8 +749,7 @@ mod tests {
                 06D5F6B61DAC38417E8D12CFDF926E0"
             ),
         };
-        let cipher = Aes128::new(GenericArray::from_slice(&v.key));
-        let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
+        let ccm = CcmMode::new(&v.key, v.nonce, v.mac_len).unwrap();
         let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         let ciphertext = ccm
             .generate_encrypt(&mut ciphertext_buf, &v.hdr, &v.data)
@@ -777,8 +774,7 @@ mod tests {
                 06D5F6B61DAC38417E8D12CFDF926E0"
             ),
         };
-        let cipher = Aes128::new(GenericArray::from_slice(&v.key));
-        let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
+        let ccm = CcmMode::new(&v.key, v.nonce, v.mac_len).unwrap();
         let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         let ciphertext = ccm
             .generate_encrypt(&mut ciphertext_buf, &v.hdr, &v.data)
@@ -810,8 +806,7 @@ mod tests {
             ),
         };
 
-        let cipher = Aes128::new(GenericArray::from_slice(&v.key));
-        let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
+        let ccm = CcmMode::new(&v.key, v.nonce, v.mac_len).unwrap();
         let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         let ciphertext = ccm
             .generate_encrypt(&mut ciphertext_buf, &v.hdr, &v.data)
@@ -850,8 +845,7 @@ mod tests {
             expected: &[],
         };
 
-        let cipher = Aes128::new(GenericArray::from_slice(&v.key));
-        let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
+        let ccm = CcmMode::new(&v.key, v.nonce, v.mac_len).unwrap();
         let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         let ciphertext = ccm
             .generate_encrypt(&mut ciphertext_buf, &v.hdr, &v.data)
@@ -876,8 +870,7 @@ mod tests {
             expected: &[],
         };
 
-        let cipher = Aes128::new(GenericArray::from_slice(&v.key));
-        let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
+        let ccm = CcmMode::new(&v.key, v.nonce, v.mac_len).unwrap();
 
         let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         let ciphertext = ccm
@@ -903,8 +896,7 @@ mod tests {
     }
 
     fn test_vector(v: TestVector) {
-        let cipher = Aes128::new(GenericArray::from_slice(&v.key));
-        let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
+        let ccm = CcmMode::new(&v.key, v.nonce, v.mac_len).unwrap();
 
         let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         let ciphertext = ccm
