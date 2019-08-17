@@ -45,6 +45,216 @@ impl<'a> CcmMode<'a> {
             mlen,
         })
     }
+
+    /// CCM tag generation and encryption procedure.
+    ///
+    /// `out` buffer must be at least (`payload.len()` + `c.mlen`) bytes long.
+    /// A slice to the encrypted output within the buffer will be returned.
+    ///
+    /// # Arguments
+    /// * `out` - Encrypted data output buffer.
+    /// * `associated_data` - Associated data.
+    /// * `payload` - Payload.
+    /// * `c` - `CcmMode` instance.
+    ///
+    /// # Details
+    /// The sequence b for encryption is formatted as follows:
+    /// ```text
+    /// b = [FLAGS | nonce | counter ], where:
+    ///   FLAGS is 1 byte long
+    ///   nonce is 13 bytes long
+    ///   counter is 2 bytes long
+    /// The byte FLAGS is composed by the following 8 bits:
+    ///   0-2 bits: used to represent the value of q-1
+    ///   3-7 btis: always 0's
+    /// ```
+    /// The sequence b for authentication is formatted as follows:
+    /// ```text
+    /// b = [FLAGS | nonce | length(mac length)], where:
+    ///   FLAGS is 1 byte long
+    ///   nonce is 13 bytes long
+    ///   length(mac length) is 2 bytes long
+    /// The byte FLAGS is composed by the following 8 bits:
+    ///   0-2 bits: used to represent the value of q-1
+    ///   3-5 bits: mac length (encoded as: (mlen-2)/2)
+    ///   6: Adata (0 if alen == 0, and 1 otherwise)
+    ///   7: always 0
+    /// ```
+    pub fn tc_ccm_generation_encryption<'b>(
+        &self,
+        out: &'b mut [u8],
+        associated_data: &[u8],
+        payload: &[u8],
+    ) -> Result<&'b mut [u8], Error> {
+        let olen = out.len();
+        let alen = associated_data.len();
+        let plen = payload.len();
+
+        // Input sanity check
+        if alen >= CCM_AAD_MAX_BYTES || plen >= CCM_PAYLOAD_MAX_BYTES {
+            return Err(Error::UnsupportedSize);
+        }
+        if olen < plen + self.mlen {
+            return Err(Error::InvalidOutSize);
+        }
+
+        let mut b = [0u8; AES_BLOCK_SIZE];
+        let mut tag = [0u8; AES_BLOCK_SIZE];
+
+        // Generating the authentication tag ----------------------------------
+
+        // Formatting the sequence b for authentication
+        b[0] = if alen > 0 { 0x40 } else { 0 }
+            | ((self.mlen as u8 - 2) / 2) << 3
+            | 1;
+        b[1..14].copy_from_slice(&self.nonce[..13]);
+        b[14] = (plen >> 8) as u8;
+        b[15] = plen as u8;
+
+        // Computing the authentication tag using cbc-mac
+        tag.copy_from_slice(&b);
+        self.cipher
+            .encrypt_block(GenericArray::from_mut_slice(&mut tag));
+        if alen > 0 {
+            ccm_cbc_mac(&mut tag, associated_data, true, self.cipher);
+        }
+        if plen > 0 {
+            ccm_cbc_mac(&mut tag, payload, false, self.cipher);
+        }
+
+        // Encryption ---------------------------------------------------------
+
+        // Formatting the sequence b for encryption
+        // q - 1 = 2 - 1 = 1
+        b[0] = 1;
+        b[14] = 0;
+        b[15] = 0;
+
+        // Encrypting payload using ctr mode
+        ccm_ctr_mode(&mut out[..plen], payload, &mut b, self.cipher);
+
+        // Restoring initial counter for ctr_mode (0)
+        b[14] = 0;
+        b[15] = 0;
+
+        // Encrypting b and adding the tag to the output
+        self.cipher
+            .encrypt_block(GenericArray::from_mut_slice(&mut b));
+        for i in 0..self.mlen {
+            out[plen + i] = tag[i] ^ b[i];
+        }
+
+        Ok(&mut out[..plen + self.mlen])
+    }
+
+    /// CCM decryption and tag verification procedure.
+    ///
+    /// `out` buffer must be at least (`payload.len()` - `c.mlen`) bytes long.
+    /// A slice to the decrypted output within the buffer will be returned.
+    ///
+    /// # Arguments
+    /// * `out` - Decrypted data output buffer.
+    /// * `associated_data` - Associated data.
+    /// * `payload` - Payload.
+    /// * `c` - `CcmMode` instance.
+    ///
+    /// # Details
+    /// The sequence b for encryption is formatted as follows:
+    /// ```text
+    /// b = [FLAGS | nonce | counter ], where:
+    ///   FLAGS is 1 byte long
+    ///   nonce is 13 bytes long
+    ///   counter is 2 bytes long
+    /// The byte FLAGS is composed by the following 8 bits:
+    ///   0-2 bits: used to represent the value of q-1
+    ///   3-7 btis: always 0's
+    /// ```
+    /// The sequence b for authentication is formatted as follows:
+    /// ```text
+    /// b = [FLAGS | nonce | length(mac length)], where:
+    ///   FLAGS is 1 byte long
+    ///   nonce is 13 bytes long
+    ///   length(mac length) is 2 bytes long
+    /// The byte FLAGS is composed by the following 8 bits:
+    ///   0-2 bits: used to represent the value of q-1
+    ///   3-5 bits: mac length (encoded as: (mlen-2)/2)
+    ///   6: Adata (0 if alen == 0, and 1 otherwise)
+    ///   7: always 0
+    /// ```
+    pub fn tc_ccm_decryption_verification<'b>(
+        &self,
+        out: &'b mut [u8],
+        associated_data: &[u8],
+        payload: &[u8],
+    ) -> Result<&'b mut [u8], Error> {
+        let olen = out.len();
+        let alen = associated_data.len();
+        let plen = payload.len();
+
+        // Input sanity check
+        if alen >= CCM_AAD_MAX_BYTES || plen >= CCM_PAYLOAD_MAX_BYTES {
+            return Err(Error::UnsupportedSize);
+        }
+        if olen < plen - self.mlen {
+            return Err(Error::InvalidOutSize);
+        }
+
+        let mut b = [0u8; AES_BLOCK_SIZE];
+        let mut tag = [0u8; AES_BLOCK_SIZE];
+
+        // Decryption ---------------------------------------------------------
+
+        // Formatting the sequence b for decryption
+        // q - 1 = 2 - 1 = 1
+        b[0] = 1;
+        b[1..14].copy_from_slice(&self.nonce[..13]);
+
+        // Decrypting payload using ctr mode
+        ccm_ctr_mode(
+            &mut out[..plen - self.mlen],
+            &payload[..plen - self.mlen],
+            &mut b,
+            self.cipher,
+        );
+
+        // Restoring initial counter value (0)
+        b[14] = 0;
+        b[15] = 0;
+
+        // Encrypting b and restoring the tag from input
+        self.cipher
+            .encrypt_block(GenericArray::from_mut_slice(&mut b));
+        for i in 0..self.mlen {
+            tag[i] = payload[plen - self.mlen + i] ^ b[i];
+        }
+
+        // Verifying the authentication tag -----------------------------------
+
+        // Formatting the sequence b for authentication
+        b[0] = if alen > 0 { 0x40 } else { 0 }
+            | ((self.mlen as u8 - 2) / 2) << 3
+            | 1;
+        b[1..14].copy_from_slice(&self.nonce[..13]);
+        b[14] = ((plen - self.mlen) >> 8) as u8;
+        b[15] = (plen - self.mlen) as u8;
+
+        // Computing the authentication tag using cbc-mac
+        self.cipher
+            .encrypt_block(GenericArray::from_mut_slice(&mut b));
+        if alen > 0 {
+            ccm_cbc_mac(&mut b, associated_data, true, self.cipher);
+        }
+        if plen > 0 {
+            ccm_cbc_mac(&mut b, &out[..plen - self.mlen], false, self.cipher);
+        }
+
+        // Comparing the received tag and the computed one
+        if b[..self.mlen] != tag[..self.mlen] {
+            return Err(Error::VerificationFailed);
+        }
+
+        Ok(&mut out[..plen - self.mlen])
+    }
 }
 
 /// Variation of CBC-MAC mode used in CCM.
@@ -102,209 +312,6 @@ fn ccm_ctr_mode(out: &mut [u8], r#in: &[u8], ctr: &mut [u8], cipher: &Aes128) {
     // Update the counter
     ctr[14] = nonce[14];
     ctr[15] = nonce[15];
-}
-
-/// CCM tag generation and encryption procedure.
-///
-/// `out` buffer must be at least (`payload.len()` + `c.mlen`) bytes long. A
-/// slice to the encrypted output within the buffer will be returned.
-///
-/// # Arguments
-/// * `out` - Encrypted data output buffer.
-/// * `associated_data` - Associated data.
-/// * `payload` - Payload.
-/// * `c` - `CcmMode` instance.
-///
-/// # Details
-/// The sequence b for encryption is formatted as follows:
-/// ```text
-/// b = [FLAGS | nonce | counter ], where:
-///   FLAGS is 1 byte long
-///   nonce is 13 bytes long
-///   counter is 2 bytes long
-/// The byte FLAGS is composed by the following 8 bits:
-///   0-2 bits: used to represent the value of q-1
-///   3-7 btis: always 0's
-/// ```
-/// The sequence b for authentication is formatted as follows:
-/// ```text
-/// b = [FLAGS | nonce | length(mac length)], where:
-///   FLAGS is 1 byte long
-///   nonce is 13 bytes long
-///   length(mac length) is 2 bytes long
-/// The byte FLAGS is composed by the following 8 bits:
-///   0-2 bits: used to represent the value of q-1
-///   3-5 bits: mac length (encoded as: (mlen-2)/2)
-///   6: Adata (0 if alen == 0, and 1 otherwise)
-///   7: always 0
-/// ```
-pub fn tc_ccm_generation_encryption<'a>(
-    out: &'a mut [u8],
-    associated_data: &[u8],
-    payload: &[u8],
-    c: &CcmMode,
-) -> Result<&'a mut [u8], Error> {
-    let olen = out.len();
-    let alen = associated_data.len();
-    let plen = payload.len();
-
-    // Input sanity check
-    if alen >= CCM_AAD_MAX_BYTES || plen >= CCM_PAYLOAD_MAX_BYTES {
-        return Err(Error::UnsupportedSize);
-    }
-    if olen < plen + c.mlen {
-        return Err(Error::InvalidOutSize);
-    }
-
-    let mut b = [0u8; AES_BLOCK_SIZE];
-    let mut tag = [0u8; AES_BLOCK_SIZE];
-
-    // Generating the authentication tag --------------------------------------
-
-    // Formatting the sequence b for authentication
-    b[0] = if alen > 0 { 0x40 } else { 0 } | ((c.mlen as u8 - 2) / 2) << 3 | 1;
-    b[1..14].copy_from_slice(&c.nonce[..13]);
-    b[14] = (plen >> 8) as u8;
-    b[15] = plen as u8;
-
-    // Computing the authentication tag using cbc-mac
-    tag.copy_from_slice(&b);
-    c.cipher
-        .encrypt_block(GenericArray::from_mut_slice(&mut tag));
-    if alen > 0 {
-        ccm_cbc_mac(&mut tag, associated_data, true, c.cipher);
-    }
-    if plen > 0 {
-        ccm_cbc_mac(&mut tag, payload, false, c.cipher);
-    }
-
-    // Encryption -------------------------------------------------------------
-
-    // Formatting the sequence b for encryption
-    // q - 1 = 2 - 1 = 1
-    b[0] = 1;
-    b[14] = 0;
-    b[15] = 0;
-
-    // Encrypting payload using ctr mode
-    ccm_ctr_mode(&mut out[..plen], payload, &mut b, c.cipher);
-
-    // Restoring initial counter for ctr_mode (0)
-    b[14] = 0;
-    b[15] = 0;
-
-    // Encrypting b and adding the tag to the output
-    c.cipher.encrypt_block(GenericArray::from_mut_slice(&mut b));
-    for i in 0..c.mlen {
-        out[plen + i] = tag[i] ^ b[i];
-    }
-
-    Ok(&mut out[..plen + c.mlen])
-}
-
-/// CCM decryption and tag verification procedure.
-///
-/// `out` buffer must be at least (`payload.len()` - `c.mlen`) bytes long. A
-/// slice to the decrypted output within the buffer will be returned.
-///
-/// # Arguments
-/// * `out` - Decrypted data output buffer.
-/// * `associated_data` - Associated data.
-/// * `payload` - Payload.
-/// * `c` - `CcmMode` instance.
-///
-/// # Details
-/// The sequence b for encryption is formatted as follows:
-/// ```text
-/// b = [FLAGS | nonce | counter ], where:
-///   FLAGS is 1 byte long
-///   nonce is 13 bytes long
-///   counter is 2 bytes long
-/// The byte FLAGS is composed by the following 8 bits:
-///   0-2 bits: used to represent the value of q-1
-///   3-7 btis: always 0's
-/// ```
-/// The sequence b for authentication is formatted as follows:
-/// ```text
-/// b = [FLAGS | nonce | length(mac length)], where:
-///   FLAGS is 1 byte long
-///   nonce is 13 bytes long
-///   length(mac length) is 2 bytes long
-/// The byte FLAGS is composed by the following 8 bits:
-///   0-2 bits: used to represent the value of q-1
-///   3-5 bits: mac length (encoded as: (mlen-2)/2)
-///   6: Adata (0 if alen == 0, and 1 otherwise)
-///   7: always 0
-/// ```
-pub fn tc_ccm_decryption_verification<'a>(
-    out: &'a mut [u8],
-    associated_data: &[u8],
-    payload: &[u8],
-    c: &CcmMode,
-) -> Result<&'a mut [u8], Error> {
-    let olen = out.len();
-    let alen = associated_data.len();
-    let plen = payload.len();
-
-    // Input sanity check
-    if alen >= CCM_AAD_MAX_BYTES || plen >= CCM_PAYLOAD_MAX_BYTES {
-        return Err(Error::UnsupportedSize);
-    }
-    if olen < plen - c.mlen {
-        return Err(Error::InvalidOutSize);
-    }
-
-    let mut b = [0u8; AES_BLOCK_SIZE];
-    let mut tag = [0u8; AES_BLOCK_SIZE];
-
-    // Decryption -------------------------------------------------------------
-
-    // Formatting the sequence b for decryption
-    // q - 1 = 2 - 1 = 1
-    b[0] = 1;
-    b[1..14].copy_from_slice(&c.nonce[..13]);
-
-    // Decrypting payload using ctr mode
-    ccm_ctr_mode(
-        &mut out[..plen - c.mlen],
-        &payload[..plen - c.mlen],
-        &mut b,
-        c.cipher,
-    );
-
-    // Restoring initial counter value (0)
-    b[14] = 0;
-    b[15] = 0;
-
-    // Encrypting b and restoring the tag from input
-    c.cipher.encrypt_block(GenericArray::from_mut_slice(&mut b));
-    for i in 0..c.mlen {
-        tag[i] = payload[plen - c.mlen + i] ^ b[i];
-    }
-
-    // Verifying the authentication tag ---------------------------------------
-
-    // Formatting the sequence b for authentication
-    b[0] = if alen > 0 { 0x40 } else { 0 } | ((c.mlen as u8 - 2) / 2) << 3 | 1;
-    b[1..14].copy_from_slice(&c.nonce[..13]);
-    b[14] = ((plen - c.mlen) >> 8) as u8;
-    b[15] = (plen - c.mlen) as u8;
-
-    // Computing the authentication tag using cbc-mac
-    c.cipher.encrypt_block(GenericArray::from_mut_slice(&mut b));
-    if alen > 0 {
-        ccm_cbc_mac(&mut b, associated_data, true, c.cipher);
-    }
-    if plen > 0 {
-        ccm_cbc_mac(&mut b, &out[..plen - c.mlen], false, c.cipher);
-    }
-
-    // Comparing the received tag and the computed one
-    if b[..c.mlen] != tag[..c.mlen] {
-        return Err(Error::VerificationFailed);
-    }
-
-    Ok(&mut out[..plen - c.mlen])
 }
 
 #[cfg(test)]
@@ -703,11 +710,10 @@ mod tests {
         let mut ciphertext_buf = [0u8; 23 + 7];
         assert_eq!(
             Error::InvalidOutSize,
-            tc_ccm_generation_encryption(
+            ccm.tc_ccm_generation_encryption(
                 &mut ciphertext_buf,
                 &v.hdr,
                 &v.data,
-                &ccm,
             )
             .unwrap_err()
         );
@@ -730,11 +736,10 @@ mod tests {
         let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         assert_eq!(
             Error::UnsupportedSize,
-            tc_ccm_generation_encryption(
+            ccm.tc_ccm_generation_encryption(
                 &mut ciphertext_buf,
                 &v.hdr,
                 &v.data,
-                &ccm,
             )
             .unwrap_err()
         );
@@ -757,22 +762,17 @@ mod tests {
         let cipher = Aes128::new(GenericArray::from_slice(&v.key));
         let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
         let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
-        let ciphertext = tc_ccm_generation_encryption(
-            &mut ciphertext_buf,
-            &v.hdr,
-            &v.data,
-            &ccm,
-        )
-        .unwrap();
+        let ciphertext = ccm
+            .tc_ccm_generation_encryption(&mut ciphertext_buf, &v.hdr, &v.data)
+            .unwrap();
         // This is 1 byte smaller than it needs to be
         let mut plaintext_buf = [0u8; 22];
         assert_eq!(
             Error::InvalidOutSize,
-            tc_ccm_decryption_verification(
+            ccm.tc_ccm_decryption_verification(
                 &mut plaintext_buf,
                 &v.hdr,
                 &ciphertext,
-                &ccm,
             )
             .unwrap_err()
         );
@@ -792,22 +792,17 @@ mod tests {
         let cipher = Aes128::new(GenericArray::from_slice(&v.key));
         let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
         let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
-        let ciphertext = tc_ccm_generation_encryption(
-            &mut ciphertext_buf,
-            &v.hdr,
-            &v.data,
-            &ccm,
-        )
-        .unwrap();
+        let ciphertext = ccm
+            .tc_ccm_generation_encryption(&mut ciphertext_buf, &v.hdr, &v.data)
+            .unwrap();
         let mut plaintext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         assert_eq!(
             Error::UnsupportedSize,
-            tc_ccm_decryption_verification(
+            ccm.tc_ccm_decryption_verification(
                 &mut plaintext_buf,
                 // This is above the maximum allowed size
                 &[0u8; 66000],
                 &ciphertext,
-                &ccm,
             )
             .unwrap_err()
         );
@@ -830,23 +825,18 @@ mod tests {
         let cipher = Aes128::new(GenericArray::from_slice(&v.key));
         let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
         let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
-        let ciphertext = tc_ccm_generation_encryption(
-            &mut ciphertext_buf,
-            &v.hdr,
-            &v.data,
-            &ccm,
-        )
-        .unwrap();
+        let ciphertext = ccm
+            .tc_ccm_generation_encryption(&mut ciphertext_buf, &v.hdr, &v.data)
+            .unwrap();
 
         let mut plaintext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         assert_eq!(
             Error::VerificationFailed,
-            tc_ccm_decryption_verification(
+            ccm.tc_ccm_decryption_verification(
                 &mut plaintext_buf,
                 // This associated data has been tampered with
                 &hex!("0001020304050608"),
                 &ciphertext,
-                &ccm,
             )
             .unwrap_err()
         );
@@ -854,11 +844,10 @@ mod tests {
         ciphertext[10] = 0xFF;
         assert_eq!(
             Error::VerificationFailed,
-            tc_ccm_decryption_verification(
+            ccm.tc_ccm_decryption_verification(
                 &mut plaintext_buf,
                 &v.hdr,
                 &ciphertext,
-                &ccm,
             )
             .unwrap_err()
         );
@@ -880,22 +869,18 @@ mod tests {
         let cipher = Aes128::new(GenericArray::from_slice(&v.key));
         let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
         let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
-        let ciphertext = tc_ccm_generation_encryption(
-            &mut ciphertext_buf,
-            &v.hdr,
-            &v.data,
-            &ccm,
-        )
-        .unwrap();
+        let ciphertext = ccm
+            .tc_ccm_generation_encryption(&mut ciphertext_buf, &v.hdr, &v.data)
+            .unwrap();
 
         let mut plaintext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
-        let plaintext = tc_ccm_decryption_verification(
-            &mut plaintext_buf,
-            &v.hdr,
-            &ciphertext,
-            &ccm,
-        )
-        .unwrap();
+        let plaintext = ccm
+            .tc_ccm_decryption_verification(
+                &mut plaintext_buf,
+                &v.hdr,
+                &ciphertext,
+            )
+            .unwrap();
         assert_eq!(&v.data[..], plaintext);
     }
 
@@ -915,22 +900,18 @@ mod tests {
         let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
 
         let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
-        let ciphertext = tc_ccm_generation_encryption(
-            &mut ciphertext_buf,
-            &v.hdr,
-            &v.data,
-            &ccm,
-        )
-        .unwrap();
+        let ciphertext = ccm
+            .tc_ccm_generation_encryption(&mut ciphertext_buf, &v.hdr, &v.data)
+            .unwrap();
 
         let mut plaintext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
-        let plaintext = tc_ccm_decryption_verification(
-            &mut plaintext_buf,
-            &v.hdr,
-            &ciphertext,
-            &ccm,
-        )
-        .unwrap();
+        let plaintext = ccm
+            .tc_ccm_decryption_verification(
+                &mut plaintext_buf,
+                &v.hdr,
+                &ciphertext,
+            )
+            .unwrap();
         assert_eq!(&v.data[..], plaintext);
     }
 
@@ -950,23 +931,19 @@ mod tests {
         let ccm = CcmMode::new(&cipher, v.nonce, v.mac_len).unwrap();
 
         let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
-        let ciphertext = tc_ccm_generation_encryption(
-            &mut ciphertext_buf,
-            &v.hdr,
-            &v.data,
-            &ccm,
-        )
-        .unwrap();
+        let ciphertext = ccm
+            .tc_ccm_generation_encryption(&mut ciphertext_buf, &v.hdr, &v.data)
+            .unwrap();
         assert_eq!(&v.expected[..], ciphertext);
 
         let mut plaintext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
-        let plaintext = tc_ccm_decryption_verification(
-            &mut plaintext_buf,
-            &v.hdr,
-            &ciphertext,
-            &ccm,
-        )
-        .unwrap();
+        let plaintext = ccm
+            .tc_ccm_decryption_verification(
+                &mut plaintext_buf,
+                &v.hdr,
+                &ciphertext,
+            )
+            .unwrap();
         assert_eq!(&v.data[..], plaintext);
     }
 }
