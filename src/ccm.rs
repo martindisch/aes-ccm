@@ -81,12 +81,12 @@ impl CcmMode {
     ///   6: Adata (0 if alen == 0, and 1 otherwise)
     ///   7: always 0
     /// ```
-    pub fn generate_encrypt<'b>(
+    pub fn generate_encrypt<'a>(
         &self,
-        out: &'b mut [u8],
+        out: &'a mut [u8],
         associated_data: &[u8],
         payload: &[u8],
-    ) -> Result<&'b mut [u8], Error> {
+    ) -> Result<&'a mut [u8], Error> {
         let olen = out.len();
         let alen = associated_data.len();
         let plen = payload.len();
@@ -182,12 +182,12 @@ impl CcmMode {
     ///   6: Adata (0 if alen == 0, and 1 otherwise)
     ///   7: always 0
     /// ```
-    pub fn decrypt_verify<'b>(
+    pub fn decrypt_verify<'a>(
         &self,
-        out: &'b mut [u8],
+        out: &'a mut [u8],
         associated_data: &[u8],
         payload: &[u8],
-    ) -> Result<&'b mut [u8], Error> {
+    ) -> Result<&'a mut [u8], Error> {
         let olen = out.len();
         let alen = associated_data.len();
         let plen = payload.len();
