@@ -71,13 +71,13 @@ impl CcmMode {
     /// ```
     /// The sequence b for authentication is formatted as follows:
     /// ```text
-    /// b = [FLAGS | nonce | length(mac length)], where:
+    /// b = [FLAGS | nonce | length(MAC length)], where:
     ///   FLAGS is 1 byte long
     ///   nonce is 13 bytes long
-    ///   length(mac length) is 2 bytes long
+    ///   length(MAC length) is 2 bytes long
     /// The byte FLAGS is composed by the following 8 bits:
     ///   0-2 bits: used to represent the value of q-1
-    ///   3-5 bits: mac length (encoded as: (mlen-2)/2)
+    ///   3-5 bits: MAC length (encoded as: (mlen-2)/2)
     ///   6: Adata (0 if alen == 0, and 1 otherwise)
     ///   7: always 0
     /// ```
@@ -112,7 +112,7 @@ impl CcmMode {
         b[14] = (plen >> 8) as u8;
         b[15] = plen as u8;
 
-        // Computing the authentication tag using cbc-mac
+        // Computing the authentication tag using CBC-MAC
         tag.copy_from_slice(&b);
         self.cipher
             .encrypt_block(GenericArray::from_mut_slice(&mut tag));
@@ -172,13 +172,13 @@ impl CcmMode {
     /// ```
     /// The sequence b for authentication is formatted as follows:
     /// ```text
-    /// b = [FLAGS | nonce | length(mac length)], where:
+    /// b = [FLAGS | nonce | length(MAC length)], where:
     ///   FLAGS is 1 byte long
     ///   nonce is 13 bytes long
-    ///   length(mac length) is 2 bytes long
+    ///   length(MAC length) is 2 bytes long
     /// The byte FLAGS is composed by the following 8 bits:
     ///   0-2 bits: used to represent the value of q-1
-    ///   3-5 bits: mac length (encoded as: (mlen-2)/2)
+    ///   3-5 bits: MAC length (encoded as: (mlen-2)/2)
     ///   6: Adata (0 if alen == 0, and 1 otherwise)
     ///   7: always 0
     /// ```
@@ -239,7 +239,7 @@ impl CcmMode {
         b[14] = ((plen - self.mlen) >> 8) as u8;
         b[15] = (plen - self.mlen) as u8;
 
-        // Computing the authentication tag using cbc-mac
+        // Computing the authentication tag using CBC-MAC
         self.cipher
             .encrypt_block(GenericArray::from_mut_slice(&mut b));
         if alen > 0 {

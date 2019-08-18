@@ -56,7 +56,7 @@ I'm not a cryptographer and this hasn't been audited in any way.
 It is however a careful port of [TinyCrypt], so if it's sound, then this
 *should* be too.
 
-The mac length parameter is an important parameter to estimate the security
+The MAC length parameter is an important parameter to estimate the security
 against collision attacks (that aim at finding different messages that
 produce the same authentication tag).
 The implementation accepts any even integer between 4 and 16, as suggested
@@ -64,7 +64,7 @@ in [SP 800-38C].
 
 [RFC 3610], which also specifies CCM, presents a few relevant security
 suggestions, such as:
-* It is recommended that most applications use a mac length greater than 8.
+* It is recommended that most applications use a MAC length greater than 8.
 * The usage of the same nonce for two different messages which are
   encrypted with the same key destroys the security of CCM mode.
 
