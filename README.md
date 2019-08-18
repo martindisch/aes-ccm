@@ -1,4 +1,4 @@
-# [WIP] aes-ccm
+# aes-ccm
 <!-- cargo-sync-readme start -->
 
 A pure-Rust, `#![no_std]`, zero-allocation AES-CCM implementation ported
