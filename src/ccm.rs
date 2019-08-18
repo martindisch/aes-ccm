@@ -1,8 +1,8 @@
 //! AES-CCM implementation.
 
-use aes_soft::block_cipher_trait::generic_array::GenericArray;
-use aes_soft::block_cipher_trait::BlockCipher;
-use aes_soft::Aes128;
+use aes::block_cipher_trait::generic_array::GenericArray;
+use aes::block_cipher_trait::BlockCipher;
+use aes::Aes128;
 
 use crate::error::Error;
 
