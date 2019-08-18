@@ -1,9 +1,9 @@
 //! A pure-Rust, `#![no_std]`, zero-allocation AES-CCM implementation ported
-//! from [TinyCrypt].
+//! from [TinyCrypt] using [RustCrypto's AES].
 //!
-//! # Overview
+//! ## Overview
 //! CCM (for "Counter with CBC-MAC") mode is a NIST approved mode of operation
-//! defined in SP 800-38C.
+//! defined in [SP 800-38C].
 //!
 //! This implementation accepts:
 //! 1. Both non-empty payload and associated data (it encrypts and
@@ -16,20 +16,7 @@
 //! The implementation accepts associated data of any length between 0 and
 //! (2^16 - 2^8) bytes.
 //!
-//! # Security
-//! The mac length parameter is an important parameter to estimate the security
-//! against collision attacks (that aim at finding different messages that
-//! produce the same authentication tag).
-//! The implementation accepts any even integer between 4 and 16, as suggested
-//! in SP 800-38C.
-//!
-//! RFC-3610, which also specifies CCM, presents a few relevant security
-//! suggestions, such as:
-//! * It is recommended that most applications use a mac length greater than 8.
-//! * Besides, the usage of the same nonce for two different messages which are
-//!   encrypted with the same key destroys the security of CCM mode.
-//!
-//! # Usage
+//! ## Usage
 //! ```rust
 //! use aes_ccm::CcmMode;
 //!
@@ -61,7 +48,27 @@
 //! assert_eq!(&payload, plaintext);
 //! ```
 //!
+//! ## Security
+//! I'm not a cryptographer and this hasn't been audited in any way.
+//! It is however a careful port of [TinyCrypt], so if it's sound, then this
+//! *should* be too.
+//!
+//! The mac length parameter is an important parameter to estimate the security
+//! against collision attacks (that aim at finding different messages that
+//! produce the same authentication tag).
+//! The implementation accepts any even integer between 4 and 16, as suggested
+//! in [SP 800-38C].
+//!
+//! [RFC 3610], which also specifies CCM, presents a few relevant security
+//! suggestions, such as:
+//! * It is recommended that most applications use a mac length greater than 8.
+//! * The usage of the same nonce for two different messages which are
+//!   encrypted with the same key destroys the security of CCM mode.
+//!
 //! [TinyCrypt]: https://github.com/intel/tinycrypt
+//! [RustCrypto's AES]: https://github.com/RustCrypto/block-ciphers
+//! [SP 800-38C]: https://csrc.nist.gov/publications/detail/sp/800-38c/final
+//! [RFC 3610]: https://tools.ietf.org/html/rfc3610
 
 #![no_std]
 
