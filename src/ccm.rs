@@ -251,6 +251,8 @@ impl CcmMode {
 
         // Comparing the received tag and the computed one
         if b[..self.mlen] != tag[..self.mlen] {
+            // Erase the decrypted buffer
+            out[..plen - self.mlen].iter_mut().for_each(|e| *e = 0);
             return Err(Error::VerificationFailed);
         }
 
