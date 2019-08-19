@@ -1,4 +1,8 @@
 # aes-ccm
+[![Latest version](https://img.shields.io/crates/v/aes-ccm)](https://crates.io/crates/aes-ccm)
+[![Documentation](https://docs.rs/aes-ccm/badge.svg)](https://docs.rs/aes-ccm)
+[![License](https://img.shields.io/crates/l/aes-ccm)](https://github.com/martindisch/aes-ccm#license)
+
 <!-- cargo-sync-readme start -->
 
 A pure-Rust, `#![no_std]`, zero-allocation AES-CCM implementation ported
