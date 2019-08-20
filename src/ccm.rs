@@ -51,12 +51,6 @@ impl CcmMode {
     ///
     /// `out` buffer must be at least (`payload.len()` + `c.mlen`) bytes long.
     /// A slice to the encrypted output within the buffer will be returned.
-    ///
-    /// # Arguments
-    /// * `out` - Encrypted data output buffer.
-    /// * `associated_data` - Associated data.
-    /// * `payload` - Payload.
-    /// * `c` - `CcmMode` instance.
     pub fn generate_encrypt<'a>(
         &self,
         out: &'a mut [u8],
@@ -136,12 +130,6 @@ impl CcmMode {
     ///
     /// `out` buffer must be at least (`payload.len()` - `c.mlen`) bytes long.
     /// A slice to the decrypted output within the buffer will be returned.
-    ///
-    /// # Arguments
-    /// * `out` - Decrypted data output buffer.
-    /// * `associated_data` - Associated data.
-    /// * `payload` - Payload.
-    /// * `c` - `CcmMode` instance.
     pub fn decrypt_verify<'a>(
         &self,
         out: &'a mut [u8],
