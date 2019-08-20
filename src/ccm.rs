@@ -57,30 +57,6 @@ impl CcmMode {
     /// * `associated_data` - Associated data.
     /// * `payload` - Payload.
     /// * `c` - `CcmMode` instance.
-    ///
-    /// # Details
-    /// The sequence b for encryption is formatted as follows:
-    /// ```text
-    /// b = [FLAGS | nonce | counter ], where:
-    ///   FLAGS is 1 byte long
-    ///   nonce is 13 bytes long
-    ///   counter is 2 bytes long
-    /// The byte FLAGS is composed by the following 8 bits:
-    ///   0-2 bits: used to represent the value of q-1
-    ///   3-7 btis: always 0's
-    /// ```
-    /// The sequence b for authentication is formatted as follows:
-    /// ```text
-    /// b = [FLAGS | nonce | length(MAC length)], where:
-    ///   FLAGS is 1 byte long
-    ///   nonce is 13 bytes long
-    ///   length(MAC length) is 2 bytes long
-    /// The byte FLAGS is composed by the following 8 bits:
-    ///   0-2 bits: used to represent the value of q-1
-    ///   3-5 bits: MAC length (encoded as: (mlen-2)/2)
-    ///   6: Adata (0 if alen == 0, and 1 otherwise)
-    ///   7: always 0
-    /// ```
     pub fn generate_encrypt<'a>(
         &self,
         out: &'a mut [u8],
@@ -99,6 +75,14 @@ impl CcmMode {
             return Err(Error::InvalidOutSize);
         }
 
+        // The sequence b for encryption is formatted as follows:
+        // b = [FLAGS | nonce | counter ], where:
+        //   FLAGS is 1 byte long
+        //   nonce is 13 bytes long
+        //   counter is 2 bytes long
+        // The byte FLAGS is composed by the following 8 bits:
+        //   0-2 bits: used to represent the value of q-1
+        //   3-7 bits: always 0's
         let mut b = [0u8; AES_BLOCK_SIZE];
         let mut tag = [0u8; AES_BLOCK_SIZE];
 
@@ -158,30 +142,6 @@ impl CcmMode {
     /// * `associated_data` - Associated data.
     /// * `payload` - Payload.
     /// * `c` - `CcmMode` instance.
-    ///
-    /// # Details
-    /// The sequence b for encryption is formatted as follows:
-    /// ```text
-    /// b = [FLAGS | nonce | counter ], where:
-    ///   FLAGS is 1 byte long
-    ///   nonce is 13 bytes long
-    ///   counter is 2 bytes long
-    /// The byte FLAGS is composed by the following 8 bits:
-    ///   0-2 bits: used to represent the value of q-1
-    ///   3-7 btis: always 0's
-    /// ```
-    /// The sequence b for authentication is formatted as follows:
-    /// ```text
-    /// b = [FLAGS | nonce | length(MAC length)], where:
-    ///   FLAGS is 1 byte long
-    ///   nonce is 13 bytes long
-    ///   length(MAC length) is 2 bytes long
-    /// The byte FLAGS is composed by the following 8 bits:
-    ///   0-2 bits: used to represent the value of q-1
-    ///   3-5 bits: MAC length (encoded as: (mlen-2)/2)
-    ///   6: Adata (0 if alen == 0, and 1 otherwise)
-    ///   7: always 0
-    /// ```
     pub fn decrypt_verify<'a>(
         &self,
         out: &'a mut [u8],
@@ -200,6 +160,16 @@ impl CcmMode {
             return Err(Error::InvalidOutSize);
         }
 
+        // The sequence b for authentication is formatted as follows:
+        // b = [FLAGS | nonce | length(MAC length)], where:
+        //   FLAGS is 1 byte long
+        //   nonce is 13 bytes long
+        //   length(MAC length) is 2 bytes long
+        // The byte FLAGS is composed by the following 8 bits:
+        //   0-2 bits: used to represent the value of q-1
+        //   3-5 bits: MAC length (encoded as: (mlen-2)/2)
+        //   6: Adata (0 if alen == 0, and 1 otherwise)
+        //   7: always 0
         let mut b = [0u8; AES_BLOCK_SIZE];
         let mut tag = [0u8; AES_BLOCK_SIZE];
 
