@@ -20,8 +20,8 @@ This implementation accepts:
 3. Non-empty associated data and empty payload (it degenerates to an
    authentication mode on the associated data).
 
-The implementation accepts associated data of any length between 0 and
-(2^16 - 2^8) bytes.
+The implementation accepts payloads of any length between 0 and 2^16 bytes
+and associated data of any length between 0 and (2^16 - 2^8) bytes.
 
 ## Usage
 ```rust
