@@ -56,7 +56,7 @@ impl CcmMode {
         out: &'a mut [u8],
         associated_data: &[u8],
         payload: &[u8],
-    ) -> Result<&'a mut [u8], Error> {
+    ) -> Result<&'a [u8], Error> {
         let olen = out.len();
         let alen = associated_data.len();
         let plen = payload.len();
@@ -135,7 +135,7 @@ impl CcmMode {
         out: &'a mut [u8],
         associated_data: &[u8],
         payload: &[u8],
-    ) -> Result<&'a mut [u8], Error> {
+    ) -> Result<&'a [u8], Error> {
         let olen = out.len();
         let alen = associated_data.len();
         let plen = payload.len();
@@ -783,6 +783,9 @@ mod tests {
             )
             .unwrap_err()
         );
+        // Get mutable access to the ciphertext
+        let len = ciphertext.len();
+        let ciphertext = &mut ciphertext_buf[..len];
         // Tamper with the ciphertext
         ciphertext[10] = 0xFF;
         assert_eq!(
