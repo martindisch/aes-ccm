@@ -123,7 +123,7 @@ impl CcmMode {
             out[plen + i] = tag[i] ^ b[i];
         }
 
-        Ok(&mut out[..plen + self.mlen])
+        Ok(&out[..plen + self.mlen])
     }
 
     /// CCM decryption and tag verification procedure.
@@ -214,7 +214,7 @@ impl CcmMode {
             return Err(Error::VerificationFailed);
         }
 
-        Ok(&mut out[..plen - self.mlen])
+        Ok(&out[..plen - self.mlen])
     }
 }
 
