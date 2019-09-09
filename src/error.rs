@@ -8,12 +8,22 @@ use std::error;
 #[derive(Debug, PartialEq)]
 pub enum Error {
     /// Bad MAC length. Allowed sizes are: 4, 6, 8, 10, 12, 14, 16.
+    ///
+    /// Occurs only in `CcmMode::new()`.
     InvalidMacLen,
     /// Input (associated data or payload) is larger than allowed.
+    ///
+    /// Occurs in `CcmMode::generate_encrypt()` and
+    /// `CcmMode::decrypt_verify()`.
     UnsupportedSize,
     /// Output buffer is too small.
+    ///
+    /// Occurs in `CcmMode::generate_encrypt()` and
+    /// `CcmMode::decrypt_verify()`.
     InvalidOutSize,
     /// Received and computed tag don't match.
+    ///
+    /// Occurs only in `CcmMode::decrypt_verify()`.
     VerificationFailed,
 }
 
