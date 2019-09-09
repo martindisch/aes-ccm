@@ -70,7 +70,7 @@
 //! [SP 800-38C]: https://csrc.nist.gov/publications/detail/sp/800-38c/final
 //! [RFC 3610]: https://tools.ietf.org/html/rfc3610
 
-#![no_std]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(test)]
 #[macro_use]

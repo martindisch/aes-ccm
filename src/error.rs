@@ -1,6 +1,8 @@
 //! AES-CCM errors.
 
 use core::fmt;
+#[cfg(feature = "std")]
+use std::error;
 
 /// The error type for AES-CCM.
 #[derive(Debug, PartialEq)]
@@ -31,5 +33,12 @@ impl fmt::Display for Error {
                 write!(f, "Received and computed tag don't match")
             }
         }
+    }
+}
+
+#[cfg(feature = "std")]
+impl error::Error for Error {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        None
     }
 }
