@@ -1,10 +1,13 @@
 //! AES-CCM implementation.
 
-use aes::block_cipher_trait::generic_array::GenericArray;
 use aes::block_cipher_trait::BlockCipher;
 use aes::Aes128;
 
-use crate::error::Error;
+use aead::generic_array::typenum::{U0, U10, U12, U13, U14, U16, U4, U6, U8};
+use aead::generic_array::{ArrayLength, GenericArray};
+use aead::{Aead, Error, NewAead};
+
+use core::marker::PhantomData;
 
 // Number of columns (32-bit words) comprising the state
 const NB: usize = 4;
@@ -16,57 +19,66 @@ const CCM_AAD_MAX_BYTES: usize = 0xFF00;
 // Max message size in bytes: 2^(8L) = 2^16 = 65536
 const CCM_PAYLOAD_MAX_BYTES: usize = 0x10000;
 
+/// Marker trait for valid AES-CCM MAC tag sizes
+pub trait CcmTagSize: ArrayLength<u8> {}
+
+impl CcmTagSize for U4 {}
+impl CcmTagSize for U6 {}
+impl CcmTagSize for U8 {}
+impl CcmTagSize for U10 {}
+impl CcmTagSize for U12 {}
+impl CcmTagSize for U14 {}
+impl CcmTagSize for U16 {}
+
 /// The AES-CCM instance.
-pub struct CcmMode {
+pub struct CcmMode<TagSize>
+where
+    TagSize: CcmTagSize,
+{
     /// The AES-128 instance to use.
     cipher: Aes128,
-    /// The 13-byte nonce.
-    nonce: [u8; 13],
-    /// The MAC length in bytes.
-    mlen: usize,
+
+    /// Tag size
+    tag_size: PhantomData<TagSize>,
 }
 
-impl CcmMode {
-    /// Creates a new `CcmMode`.
-    ///
-    /// Valid `mlen` values are: 4, 6, 8, 10, 12, 14, 16.
-    /// The nonce is consumed to prevent reuse, which would destroy security.
-    pub fn new(
-        key: &[u8; 16],
-        nonce: [u8; 13],
-        mlen: usize,
-    ) -> Result<CcmMode, Error> {
-        if mlen < 4 || mlen > 16 || mlen & 1 != 0 {
-            return Err(Error::InvalidMacLen);
-        }
+impl<TagSize> NewAead for CcmMode<TagSize>
+where
+    TagSize: CcmTagSize,
+{
+    type KeySize = U16;
 
-        Ok(CcmMode {
-            cipher: Aes128::new(GenericArray::from_slice(key)),
-            nonce,
-            mlen,
-        })
+    /// Creates a new `CcmMode`.
+    fn new(key: GenericArray<u8, U16>) -> Self {
+        CcmMode {
+            cipher: Aes128::new(&key),
+            tag_size: PhantomData,
+        }
     }
+}
+
+impl<TagSize> Aead for CcmMode<TagSize>
+where
+    TagSize: CcmTagSize,
+{
+    type NonceSize = U13;
+    type TagSize = TagSize;
+    type CiphertextOverhead = U0;
 
     /// CCM tag generation and encryption procedure.
-    ///
-    /// `out` buffer must be at least (`payload.len()` + `c.mlen`) bytes long.
-    /// A slice to the encrypted output within the buffer will be returned.
-    pub fn generate_encrypt<'a>(
+    fn encrypt_in_place_detached(
         &self,
-        out: &'a mut [u8],
+        nonce: &GenericArray<u8, Self::NonceSize>,
         associated_data: &[u8],
-        payload: &[u8],
-    ) -> Result<&'a [u8], Error> {
-        let olen = out.len();
+        payload: &mut [u8],
+    ) -> Result<GenericArray<u8, TagSize>, Error> {
         let alen = associated_data.len();
         let plen = payload.len();
+        let tlen = TagSize::to_usize();
 
         // Input sanity check
         if alen >= CCM_AAD_MAX_BYTES || plen >= CCM_PAYLOAD_MAX_BYTES {
-            return Err(Error::UnsupportedSize);
-        }
-        if olen < plen + self.mlen {
-            return Err(Error::InvalidOutSize);
+            return Err(Error);
         }
 
         // The sequence b for encryption is formatted as follows:
@@ -83,10 +95,9 @@ impl CcmMode {
         // Generating the authentication tag ----------------------------------
 
         // Formatting the sequence b for authentication
-        b[0] = if alen > 0 { 0x40 } else { 0 }
-            | ((self.mlen as u8 - 2) / 2) << 3
-            | 1;
-        b[1..14].copy_from_slice(&self.nonce[..13]);
+        b[0] =
+            if alen > 0 { 0x40 } else { 0 } | ((tlen as u8 - 2) / 2) << 3 | 1;
+        b[1..14].copy_from_slice(&nonce[..13]);
         b[14] = (plen >> 8) as u8;
         b[15] = plen as u8;
 
@@ -110,7 +121,7 @@ impl CcmMode {
         b[15] = 0;
 
         // Encrypting payload using ctr mode
-        ccm_ctr_mode(&mut out[..plen], payload, &mut b, &self.cipher);
+        ccm_ctr_mode(payload, &mut b, &self.cipher);
 
         // Restoring initial counter for ctr_mode (0)
         b[14] = 0;
@@ -119,33 +130,34 @@ impl CcmMode {
         // Encrypting b and adding the tag to the output
         self.cipher
             .encrypt_block(GenericArray::from_mut_slice(&mut b));
-        for i in 0..self.mlen {
-            out[plen + i] = tag[i] ^ b[i];
+
+        let mut t = GenericArray::default();
+
+        for i in 0..TagSize::to_usize() {
+            t[i] = tag[i] ^ b[i];
         }
 
-        Ok(&out[..plen + self.mlen])
+        Ok(t)
     }
 
     /// CCM decryption and tag verification procedure.
     ///
     /// `out` buffer must be at least (`payload.len()` - `c.mlen`) bytes long.
     /// A slice to the decrypted output within the buffer will be returned.
-    pub fn decrypt_verify<'a>(
+    fn decrypt_in_place_detached(
         &self,
-        out: &'a mut [u8],
+        nonce: &GenericArray<u8, Self::NonceSize>,
         associated_data: &[u8],
-        payload: &[u8],
-    ) -> Result<&'a [u8], Error> {
-        let olen = out.len();
+        payload: &mut [u8],
+        tag: &GenericArray<u8, TagSize>,
+    ) -> Result<(), Error> {
         let alen = associated_data.len();
         let plen = payload.len();
+        let tlen = TagSize::to_usize();
 
         // Input sanity check
         if alen >= CCM_AAD_MAX_BYTES || plen >= CCM_PAYLOAD_MAX_BYTES {
-            return Err(Error::UnsupportedSize);
-        }
-        if olen < plen - self.mlen {
-            return Err(Error::InvalidOutSize);
+            return Err(Error);
         }
 
         // The sequence b for authentication is formatted as follows:
@@ -159,22 +171,17 @@ impl CcmMode {
         //   6: Adata (0 if alen == 0, and 1 otherwise)
         //   7: always 0
         let mut b = [0u8; AES_BLOCK_SIZE];
-        let mut tag = [0u8; AES_BLOCK_SIZE];
+        let mut t = [0u8; AES_BLOCK_SIZE];
 
         // Decryption ---------------------------------------------------------
 
         // Formatting the sequence b for decryption
         // q - 1 = 2 - 1 = 1
         b[0] = 1;
-        b[1..14].copy_from_slice(&self.nonce[..13]);
+        b[1..14].copy_from_slice(&nonce[..13]);
 
         // Decrypting payload using ctr mode
-        ccm_ctr_mode(
-            &mut out[..plen - self.mlen],
-            &payload[..plen - self.mlen],
-            &mut b,
-            &self.cipher,
-        );
+        ccm_ctr_mode(payload, &mut b, &self.cipher);
 
         // Restoring initial counter value (0)
         b[14] = 0;
@@ -183,19 +190,18 @@ impl CcmMode {
         // Encrypting b and restoring the tag from input
         self.cipher
             .encrypt_block(GenericArray::from_mut_slice(&mut b));
-        for i in 0..self.mlen {
-            tag[i] = payload[plen - self.mlen + i] ^ b[i];
+        for i in 0..tlen {
+            t[i] = tag[i] ^ b[i];
         }
 
         // Verifying the authentication tag -----------------------------------
 
         // Formatting the sequence b for authentication
-        b[0] = if alen > 0 { 0x40 } else { 0 }
-            | ((self.mlen as u8 - 2) / 2) << 3
-            | 1;
-        b[1..14].copy_from_slice(&self.nonce[..13]);
-        b[14] = ((plen - self.mlen) >> 8) as u8;
-        b[15] = (plen - self.mlen) as u8;
+        b[0] =
+            if alen > 0 { 0x40 } else { 0 } | ((tlen as u8 - 2) / 2) << 3 | 1;
+        b[1..14].copy_from_slice(&nonce[..13]);
+        b[14] = (plen >> 8) as u8;
+        b[15] = plen as u8;
 
         // Computing the authentication tag using CBC-MAC
         self.cipher
@@ -204,17 +210,18 @@ impl CcmMode {
             ccm_cbc_mac(&mut b, associated_data, true, &self.cipher);
         }
         if plen > 0 {
-            ccm_cbc_mac(&mut b, &out[..plen - self.mlen], false, &self.cipher);
+            ccm_cbc_mac(&mut b, payload, false, &self.cipher);
         }
 
         // Comparing the received tag and the computed one
-        if b[..self.mlen] != tag[..self.mlen] {
+        use subtle::ConstantTimeEq;
+        if b[..tlen].ct_eq(&t[..tlen]).unwrap_u8() == 0 {
             // Erase the decrypted buffer
-            out[..plen - self.mlen].iter_mut().for_each(|e| *e = 0);
-            return Err(Error::VerificationFailed);
+            payload.iter_mut().for_each(|e| *e = 0);
+            return Err(Error);
         }
 
-        Ok(&out[..plen - self.mlen])
+        Ok(())
     }
 }
 
@@ -247,8 +254,8 @@ fn ccm_cbc_mac(t: &mut [u8; 16], data: &[u8], flag: bool, cipher: &Aes128) {
 /// mode (the counter is increased before encryption, instead of after
 /// encryption). Besides, it is assumed that the counter is stored in the last
 /// 2 bytes of the nonce.
-fn ccm_ctr_mode(out: &mut [u8], r#in: &[u8], ctr: &mut [u8], cipher: &Aes128) {
-    let inlen = r#in.len();
+fn ccm_ctr_mode(payload: &mut [u8], ctr: &mut [u8], cipher: &Aes128) {
+    let plen = payload.len();
 
     let mut buffer = [0u8; AES_BLOCK_SIZE];
     let mut nonce = [0u8; AES_BLOCK_SIZE];
@@ -257,7 +264,7 @@ fn ccm_ctr_mode(out: &mut [u8], r#in: &[u8], ctr: &mut [u8], cipher: &Aes128) {
 
     // Select the last 2 bytes of the nonce to be incremented
     let mut block_num = u16::from(nonce[14]) << 8 | u16::from(nonce[15]);
-    for i in 0..inlen {
+    for i in 0..plen {
         if i % AES_BLOCK_SIZE == 0 {
             block_num += 1;
             nonce[14] = (block_num >> 8) as u8;
@@ -267,7 +274,7 @@ fn ccm_ctr_mode(out: &mut [u8], r#in: &[u8], ctr: &mut [u8], cipher: &Aes128) {
             cipher.encrypt_block(GenericArray::from_mut_slice(&mut buffer));
         }
         // Update the output
-        out[i] = buffer[i % AES_BLOCK_SIZE] ^ r#in[i];
+        payload[i] = buffer[i % AES_BLOCK_SIZE] ^ payload[i];
     }
 
     // Update the counter
@@ -279,13 +286,11 @@ fn ccm_ctr_mode(out: &mut [u8], r#in: &[u8], ctr: &mut [u8], cipher: &Aes128) {
 mod tests {
     use super::*;
 
-    const TEST_CCM_MAX_CT_SIZE: usize = 50;
-
     // RFC 3610 test vectors --------------------------------------------------
 
     #[test]
     fn test_vector_1() {
-        test_vector(TestVector {
+        test_vector::<U8>(TestVector {
             key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
             nonce: hex!("00000003020100A0A1A2A3A4A5"),
             hdr: &hex!("0001020304050607"),
@@ -300,7 +305,7 @@ mod tests {
 
     #[test]
     fn test_vector_2() {
-        test_vector(TestVector {
+        test_vector::<U8>(TestVector {
             key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
             nonce: hex!("00000004030201A0A1A2A3A4A5"),
             hdr: &hex!("0001020304050607"),
@@ -315,7 +320,7 @@ mod tests {
 
     #[test]
     fn test_vector_3() {
-        test_vector(TestVector {
+        test_vector::<U8>(TestVector {
             key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
             nonce: hex!("00000005040302A0A1A2A3A4A5"),
             hdr: &hex!("0001020304050607"),
@@ -330,7 +335,7 @@ mod tests {
 
     #[test]
     fn test_vector_4() {
-        test_vector(TestVector {
+        test_vector::<U8>(TestVector {
             key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
             nonce: hex!("00000006050403A0A1A2A3A4A5"),
             hdr: &hex!("000102030405060708090A0B"),
@@ -344,7 +349,7 @@ mod tests {
 
     #[test]
     fn test_vector_5() {
-        test_vector(TestVector {
+        test_vector::<U8>(TestVector {
             key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
             nonce: hex!("00000007060504A0A1A2A3A4A5"),
             hdr: &hex!("000102030405060708090A0B"),
@@ -358,7 +363,7 @@ mod tests {
 
     #[test]
     fn test_vector_6() {
-        test_vector(TestVector {
+        test_vector::<U8>(TestVector {
             key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
             nonce: hex!("00000008070605A0A1A2A3A4A5"),
             hdr: &hex!("000102030405060708090A0B"),
@@ -372,7 +377,7 @@ mod tests {
 
     #[test]
     fn test_vector_7() {
-        test_vector(TestVector {
+        test_vector::<U10>(TestVector {
             key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
             nonce: hex!("00000009080706A0A1A2A3A4A5"),
             hdr: &hex!("0001020304050607"),
@@ -387,7 +392,7 @@ mod tests {
 
     #[test]
     fn test_vector_8() {
-        test_vector(TestVector {
+        test_vector::<U10>(TestVector {
             key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
             nonce: hex!("0000000A090807A0A1A2A3A4A5"),
             hdr: &hex!("0001020304050607"),
@@ -402,7 +407,7 @@ mod tests {
 
     #[test]
     fn test_vector_9() {
-        test_vector(TestVector {
+        test_vector::<U10>(TestVector {
             key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
             nonce: hex!("0000000B0A0908A0A1A2A3A4A5"),
             hdr: &hex!("0001020304050607"),
@@ -417,7 +422,7 @@ mod tests {
 
     #[test]
     fn test_vector_10() {
-        test_vector(TestVector {
+        test_vector::<U10>(TestVector {
             key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
             nonce: hex!("0000000C0B0A09A0A1A2A3A4A5"),
             hdr: &hex!("000102030405060708090A0B"),
@@ -431,7 +436,7 @@ mod tests {
 
     #[test]
     fn test_vector_11() {
-        test_vector(TestVector {
+        test_vector::<U10>(TestVector {
             key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
             nonce: hex!("0000000D0C0B0AA0A1A2A3A4A5"),
             hdr: &hex!("000102030405060708090A0B"),
@@ -445,7 +450,7 @@ mod tests {
 
     #[test]
     fn test_vector_12() {
-        test_vector(TestVector {
+        test_vector::<U10>(TestVector {
             key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
             nonce: hex!("0000000E0D0C0BA0A1A2A3A4A5"),
             hdr: &hex!("000102030405060708090A0B"),
@@ -460,7 +465,7 @@ mod tests {
 
     #[test]
     fn test_vector_13() {
-        test_vector(TestVector {
+        test_vector::<U8>(TestVector {
             key: hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
             nonce: hex!("00412B4EA9CDBE3C9696766CFA"),
             hdr: &hex!("0BE1A88BACE018B1"),
@@ -475,7 +480,7 @@ mod tests {
 
     #[test]
     fn test_vector_14() {
-        test_vector(TestVector {
+        test_vector::<U8>(TestVector {
             key: hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
             nonce: hex!("0033568EF7B2633C9696766CFA"),
             hdr: &hex!("63018F76DC8A1BCB"),
@@ -490,7 +495,7 @@ mod tests {
 
     #[test]
     fn test_vector_15() {
-        test_vector(TestVector {
+        test_vector::<U8>(TestVector {
             key: hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
             nonce: hex!("00103FE41336713C9696766CFA"),
             hdr: &hex!("AA6CFA36CAE86B40"),
@@ -505,7 +510,7 @@ mod tests {
 
     #[test]
     fn test_vector_16() {
-        test_vector(TestVector {
+        test_vector::<U8>(TestVector {
             key: hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
             nonce: hex!("00764C63B8058E3C9696766CFA"),
             hdr: &hex!("D0D0735C531E1BECF049C244"),
@@ -519,7 +524,7 @@ mod tests {
 
     #[test]
     fn test_vector_17() {
-        test_vector(TestVector {
+        test_vector::<U8>(TestVector {
             key: hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
             nonce: hex!("00F8B678094E3B3C9696766CFA"),
             hdr: &hex!("77B60F011C03E1525899BCAE"),
@@ -533,7 +538,7 @@ mod tests {
 
     #[test]
     fn test_vector_18() {
-        test_vector(TestVector {
+        test_vector::<U8>(TestVector {
             key: hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
             nonce: hex!("00D560912D3F703C9696766CFA"),
             hdr: &hex!("CD9044D2B71FDB8120EA60C0"),
@@ -547,7 +552,7 @@ mod tests {
 
     #[test]
     fn test_vector_19() {
-        test_vector(TestVector {
+        test_vector::<U10>(TestVector {
             key: hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
             nonce: hex!("0042FFF8F1951C3C9696766CFA"),
             hdr: &hex!("D85BC7E69F944FB8"),
@@ -562,7 +567,7 @@ mod tests {
 
     #[test]
     fn test_vector_20() {
-        test_vector(TestVector {
+        test_vector::<U10>(TestVector {
             key: hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
             nonce: hex!("00920F40E56CDC3C9696766CFA"),
             hdr: &hex!("74A0EBC9069F5B37"),
@@ -577,7 +582,7 @@ mod tests {
 
     #[test]
     fn test_vector_21() {
-        test_vector(TestVector {
+        test_vector::<U10>(TestVector {
             key: hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
             nonce: hex!("0027CA0C7120BC3C9696766CFA"),
             hdr: &hex!("44A3AA3AAE6475CA"),
@@ -592,7 +597,7 @@ mod tests {
 
     #[test]
     fn test_vector_22() {
-        test_vector(TestVector {
+        test_vector::<U10>(TestVector {
             key: hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
             nonce: hex!("005B8CCBCD9AF83C9696766CFA"),
             hdr: &hex!("EC46BB63B02520C33C49FD70"),
@@ -606,7 +611,7 @@ mod tests {
 
     #[test]
     fn test_vector_23() {
-        test_vector(TestVector {
+        test_vector::<U10>(TestVector {
             key: hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
             nonce: hex!("003EBE94044B9A3C9696766CFA"),
             hdr: &hex!("47A65AC78B3D594227E85E71"),
@@ -620,7 +625,7 @@ mod tests {
 
     #[test]
     fn test_vector_24() {
-        test_vector(TestVector {
+        test_vector::<U10>(TestVector {
             key: hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
             nonce: hex!("008D493B30AE8B3C9696766CFA"),
             hdr: &hex!("6E37A6EF546D955D34AB6059"),
@@ -636,43 +641,7 @@ mod tests {
     // Assorted other tests ---------------------------------------------------
 
     #[test]
-    fn nonce_len() {
-        let key = hex!("c0c1c2c3c4c5c6c7c8c9cacbcccdcecf");
-        let nonce = hex!("00000003020100a0a1a2a3a4a5");
-
-        // Check that only even nonces in [4, 16] are allowed
-        for i in 3..=17 {
-            if i % 2 == 0 {
-                assert!(CcmMode::new(&key, nonce, i).is_ok());
-            } else {
-                assert!(CcmMode::new(&key, nonce, i).is_err());
-            }
-        }
-    }
-
-    #[test]
     fn encryption_sanity() {
-        // Testing for too small out buffer
-        let v = TestVector {
-            key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
-            nonce: hex!("00000003020100A0A1A2A3A4A5"),
-            hdr: &hex!("0001020304050607"),
-            data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E"),
-            mac_len: 8,
-            expected: &hex!(
-                "588C979A61C663D2F066D0C2C0F9898
-                06D5F6B61DAC38417E8D12CFDF926E0"
-            ),
-        };
-        let ccm = CcmMode::new(&v.key, v.nonce, v.mac_len).unwrap();
-        // Create an out buffer 1 byte smaller than it needs to be
-        let mut ciphertext_buf = [0u8; 23 + 7];
-        assert_eq!(
-            Error::InvalidOutSize,
-            ccm.generate_encrypt(&mut ciphertext_buf, &v.hdr, &v.data,)
-                .unwrap_err()
-        );
-
         // Testing for too large associated data
         let v = TestVector {
             key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
@@ -686,42 +655,21 @@ mod tests {
                 06D5F6B61DAC38417E8D12CFDF926E0"
             ),
         };
-        let ccm = CcmMode::new(&v.key, v.nonce, v.mac_len).unwrap();
-        let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
-        assert_eq!(
-            Error::UnsupportedSize,
-            ccm.generate_encrypt(&mut ciphertext_buf, &v.hdr, &v.data,)
-                .unwrap_err()
-        );
+
+        let ccm: CcmMode<U8> = CcmMode::new(v.key.into());
+        assert!(ccm
+            .encrypt(
+                GenericArray::from_slice(&v.nonce),
+                aead::Payload {
+                    aad: &v.hdr,
+                    msg: &v.data
+                }
+            )
+            .is_err());
     }
 
     #[test]
     fn decryption_sanity() {
-        // Testing for too small out buffer
-        let v = TestVector {
-            key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
-            nonce: hex!("00000003020100A0A1A2A3A4A5"),
-            hdr: &hex!("0001020304050607"),
-            data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E"),
-            mac_len: 8,
-            expected: &hex!(
-                "588C979A61C663D2F066D0C2C0F9898
-                06D5F6B61DAC38417E8D12CFDF926E0"
-            ),
-        };
-        let ccm = CcmMode::new(&v.key, v.nonce, v.mac_len).unwrap();
-        let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
-        let ciphertext = ccm
-            .generate_encrypt(&mut ciphertext_buf, &v.hdr, &v.data)
-            .unwrap();
-        // This is 1 byte smaller than it needs to be
-        let mut plaintext_buf = [0u8; 22];
-        assert_eq!(
-            Error::InvalidOutSize,
-            ccm.decrypt_verify(&mut plaintext_buf, &v.hdr, &ciphertext,)
-                .unwrap_err()
-        );
-
         // Testing for too large associated data
         let v = TestVector {
             key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
@@ -734,22 +682,26 @@ mod tests {
                 06D5F6B61DAC38417E8D12CFDF926E0"
             ),
         };
-        let ccm = CcmMode::new(&v.key, v.nonce, v.mac_len).unwrap();
-        let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
+        let ccm: CcmMode<U8> = CcmMode::new(v.key.into());
         let ciphertext = ccm
-            .generate_encrypt(&mut ciphertext_buf, &v.hdr, &v.data)
-            .unwrap();
-        let mut plaintext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
-        assert_eq!(
-            Error::UnsupportedSize,
-            ccm.decrypt_verify(
-                &mut plaintext_buf,
-                // This is above the maximum allowed size
-                &[0u8; 66000],
-                &ciphertext,
+            .encrypt(
+                GenericArray::from_slice(&v.nonce),
+                aead::Payload {
+                    aad: &v.hdr,
+                    msg: &v.data,
+                },
             )
-            .unwrap_err()
-        );
+            .unwrap();
+        assert!(ccm
+            .decrypt(
+                GenericArray::from_slice(&v.nonce),
+                aead::Payload {
+                    // This is above the maximum allowed size
+                    aad: &[0u8; 66000],
+                    msg: &ciphertext,
+                }
+            )
+            .is_err());
     }
 
     #[test]
@@ -766,33 +718,38 @@ mod tests {
             ),
         };
 
-        let ccm = CcmMode::new(&v.key, v.nonce, v.mac_len).unwrap();
-        let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
-        let ciphertext = ccm
-            .generate_encrypt(&mut ciphertext_buf, &v.hdr, &v.data)
+        let ccm: CcmMode<U8> = CcmMode::new(v.key.into());
+        let mut ciphertext = ccm
+            .encrypt(
+                GenericArray::from_slice(&v.nonce),
+                aead::Payload {
+                    aad: &v.hdr,
+                    msg: &v.data,
+                },
+            )
             .unwrap();
 
-        let mut plaintext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
-        assert_eq!(
-            Error::VerificationFailed,
-            ccm.decrypt_verify(
-                &mut plaintext_buf,
-                // This associated data has been tampered with
-                &hex!("0001020304050608"),
-                &ciphertext,
+        assert!(ccm
+            .decrypt(
+                GenericArray::from_slice(&v.nonce),
+                aead::Payload {
+                    // This associated data has been tampered with
+                    aad: &hex!("0001020304050608"),
+                    msg: &ciphertext,
+                }
             )
-            .unwrap_err()
-        );
-        // Get mutable access to the ciphertext
-        let len = ciphertext.len();
-        let ciphertext = &mut ciphertext_buf[..len];
+            .is_err());
         // Tamper with the ciphertext
         ciphertext[10] = 0xFF;
-        assert_eq!(
-            Error::VerificationFailed,
-            ccm.decrypt_verify(&mut plaintext_buf, &v.hdr, &ciphertext,)
-                .unwrap_err()
-        );
+        assert!(ccm
+            .decrypt(
+                GenericArray::from_slice(&v.nonce),
+                aead::Payload {
+                    aad: &v.hdr,
+                    msg: &ciphertext
+                }
+            )
+            .is_err());
     }
 
     #[test]
@@ -808,17 +765,27 @@ mod tests {
             expected: &[],
         };
 
-        let ccm = CcmMode::new(&v.key, v.nonce, v.mac_len).unwrap();
-        let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
+        let ccm: CcmMode<U10> = CcmMode::new(v.key.into());
         let ciphertext = ccm
-            .generate_encrypt(&mut ciphertext_buf, &v.hdr, &v.data)
+            .encrypt(
+                GenericArray::from_slice(&v.nonce),
+                aead::Payload {
+                    aad: &v.hdr,
+                    msg: &v.data,
+                },
+            )
             .unwrap();
 
-        let mut plaintext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         let plaintext = ccm
-            .decrypt_verify(&mut plaintext_buf, &v.hdr, &ciphertext)
+            .decrypt(
+                GenericArray::from_slice(&v.nonce),
+                aead::Payload {
+                    aad: &v.hdr,
+                    msg: &ciphertext,
+                },
+            )
             .unwrap();
-        assert_eq!(&v.data[..], plaintext);
+        assert_eq!(&v.data[..], plaintext.as_slice());
     }
 
     #[test]
@@ -833,18 +800,28 @@ mod tests {
             expected: &[],
         };
 
-        let ccm = CcmMode::new(&v.key, v.nonce, v.mac_len).unwrap();
+        let ccm: CcmMode<U10> = CcmMode::new(v.key.into());
 
-        let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         let ciphertext = ccm
-            .generate_encrypt(&mut ciphertext_buf, &v.hdr, &v.data)
+            .encrypt(
+                GenericArray::from_slice(&v.nonce),
+                aead::Payload {
+                    aad: &v.hdr,
+                    msg: &v.data,
+                },
+            )
             .unwrap();
 
-        let mut plaintext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         let plaintext = ccm
-            .decrypt_verify(&mut plaintext_buf, &v.hdr, &ciphertext)
+            .decrypt(
+                GenericArray::from_slice(&v.nonce),
+                aead::Payload {
+                    aad: &v.hdr,
+                    msg: &ciphertext,
+                },
+            )
             .unwrap();
-        assert_eq!(&v.data[..], plaintext);
+        assert_eq!(&v.data[..], plaintext.as_slice());
     }
 
     // Test implementation ----------------------------------------------------
@@ -858,19 +835,30 @@ mod tests {
         expected: &'a [u8],
     }
 
-    fn test_vector(v: TestVector) {
-        let ccm = CcmMode::new(&v.key, v.nonce, v.mac_len).unwrap();
+    fn test_vector<TagSize: CcmTagSize>(v: TestVector) {
+        assert_eq!(v.mac_len, TagSize::to_usize());
+        let ccm = CcmMode::<TagSize>::new(v.key.into());
 
-        let mut ciphertext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         let ciphertext = ccm
-            .generate_encrypt(&mut ciphertext_buf, &v.hdr, &v.data)
+            .encrypt(
+                GenericArray::from_slice(&v.nonce),
+                aead::Payload {
+                    aad: &v.hdr,
+                    msg: &v.data,
+                },
+            )
             .unwrap();
-        assert_eq!(&v.expected[..], ciphertext);
+        assert_eq!(&v.expected[..], ciphertext.as_slice());
 
-        let mut plaintext_buf = [0u8; TEST_CCM_MAX_CT_SIZE];
         let plaintext = ccm
-            .decrypt_verify(&mut plaintext_buf, &v.hdr, &ciphertext)
+            .decrypt(
+                GenericArray::from_slice(&v.nonce),
+                aead::Payload {
+                    aad: &v.hdr,
+                    msg: &ciphertext,
+                },
+            )
             .unwrap();
-        assert_eq!(&v.data[..], plaintext);
+        assert_eq!(&v.data[..], plaintext.as_slice());
     }
 }

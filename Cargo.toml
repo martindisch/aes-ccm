@@ -17,14 +17,17 @@ license = "MIT OR Apache-2.0"
 edition = "2018"
 
 [dependencies]
+aead = { version = "0.2", default-features = false }
 aes = "0.3.2"
+subtle = { version = "2", default-features = false }
 
 [dev-dependencies]
 hex-literal = "0.2.0"
 
 [features]
-default = ["std"]
-std = []
+default = ["alloc"]
+alloc = ["aead/alloc"]
+heapless = ["aead/heapless"]
 
 [badges]
 maintenance = { status = "passively-maintained" }
