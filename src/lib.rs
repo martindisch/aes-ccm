@@ -1,5 +1,7 @@
 //! A pure-Rust, `#![no_std]`, zero-allocation AES-CCM implementation ported
 //! from [TinyCrypt] using [RustCrypto's AES].
+//! It implements the [`Aead`] trait, so it can be used effortlessly together
+//! with other implementations.
 //!
 //! ## Overview
 //! CCM (for "Counter with CBC-MAC") mode is a NIST approved mode of operation
@@ -18,9 +20,10 @@
 //!
 //! ## Usage
 //! ```rust
-//! use aes_ccm::CcmMode;
-//! use aes_ccm::aead::{NewAead, Aead, Payload};
-//! use aes_ccm::aead::generic_array::{GenericArray, typenum::U8};
+//! use aes_ccm::{
+//!     aead::{generic_array::typenum::U8, Aead, NewAead, Payload},
+//!     CcmMode,
+//! };
 //!
 //! let key = [
 //!     0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA,
@@ -40,13 +43,27 @@
 //!     0x1E,
 //! ];
 //! let associated_data = [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07];
+//!
 //! let ciphertext = ccm
-//!     .encrypt(&nonce.into(), Payload { aad: &associated_data, msg: &msg })
+//!     .encrypt(
+//!         &nonce.into(),
+//!         Payload {
+//!             aad: &associated_data,
+//!             msg: &msg,
+//!         },
+//!     )
 //!     .unwrap();
 //!
 //! let plaintext = ccm
-//!     .decrypt(&nonce.into(), Payload { aad: &associated_data, msg: &ciphertext })
+//!     .decrypt(
+//!         &nonce.into(),
+//!         Payload {
+//!             aad: &associated_data,
+//!             msg: &ciphertext,
+//!         },
+//!     )
 //!     .unwrap();
+//!
 //! assert_eq!(&msg[..], plaintext.as_slice());
 //! ```
 //!
@@ -64,11 +81,15 @@
 //! which can then be passed as the `buffer` parameter to the in-place encrypt
 //! and decrypt methods:
 //!
-//! ```
-//! use aes_ccm::CcmMode;
-//! use aes_ccm::aead::{NewAead, Aead, Payload};
-//! use aes_ccm::aead::generic_array::{GenericArray, typenum::{U8, U128}};
-//! use aead::heapless::Vec;
+//! ```rust
+//! use aes_ccm::{
+//!     aead::{
+//!         generic_array::typenum::{U128, U8},
+//!         heapless::Vec,
+//!         Aead, NewAead,
+//!     },
+//!     CcmMode,
+//! };
 //!
 //! let key = [
 //!     0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA,
@@ -90,16 +111,19 @@
 //! ];
 //!
 //! let mut buffer: Vec<u8, U128> = Vec::new();
-//! buffer.extend_from_slice(&plaintext);
+//! buffer.extend_from_slice(&plaintext).unwrap();
 //!
-//! // Encrypt `buffer` in-place, replacing the plaintext contents with ciphertext
-//! ccm.encrypt_in_place(&nonce.into(), &associated_data, &mut buffer).unwrap();
-//!
+//! // Encrypt `buffer` in-place, replacing the plaintext contents with
+//! // ciphertext
+//! ccm.encrypt_in_place(&nonce.into(), &associated_data, &mut buffer)
+//!     .unwrap();
 //! // `buffer` now contains the message ciphertext
 //! assert_ne!(&buffer, &plaintext);
 //!
-//! // Decrypt `buffer` in-place, replacing its ciphertext context with the original plaintext
-//! ccm.decrypt_in_place(&nonce.into(), &associated_data, &mut buffer).unwrap();
+//! // Decrypt `buffer` in-place, replacing its ciphertext contents with the
+//! // original plaintext
+//! ccm.decrypt_in_place(&nonce.into(), &associated_data, &mut buffer)
+//!     .unwrap();
 //! assert_eq!(&buffer, &plaintext);
 //! ```
 //!
@@ -122,6 +146,7 @@
 //!
 //! [TinyCrypt]: https://github.com/intel/tinycrypt
 //! [RustCrypto's AES]: https://github.com/RustCrypto/block-ciphers
+//! [`Aead`]: https://docs.rs/aead/latest/aead/trait.Aead.html
 //! [SP 800-38C]: https://csrc.nist.gov/publications/detail/sp/800-38c/final
 //! [RFC 3610]: https://tools.ietf.org/html/rfc3610
 //! [`Aead::encrypt_in_place`]: https://docs.rs/aead/latest/aead/trait.Aead.html#method.encrypt_in_place

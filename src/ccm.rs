@@ -19,7 +19,7 @@ const CCM_AAD_MAX_BYTES: usize = 0xFF00;
 // Max message size in bytes: 2^(8L) = 2^16 = 65536
 const CCM_PAYLOAD_MAX_BYTES: usize = 0x10000;
 
-/// Marker trait for valid AES-CCM MAC tag sizes
+/// Marker trait for valid AES-CCM MAC tag sizes.
 pub trait CcmTagSize: ArrayLength<u8> {}
 
 impl CcmTagSize for U4 {}
@@ -38,7 +38,7 @@ where
     /// The AES-128 instance to use.
     cipher: Aes128,
 
-    /// Tag size
+    /// Tag size.
     tag_size: PhantomData<TagSize>,
 }
 
@@ -65,7 +65,7 @@ where
     type TagSize = TagSize;
     type CiphertextOverhead = U0;
 
-    /// CCM tag generation and encryption procedure.
+    /// In-place CCM encryption and generation of detached authentication tag.
     fn encrypt_in_place_detached(
         &self,
         nonce: &GenericArray<u8, Self::NonceSize>,
@@ -127,12 +127,10 @@ where
         b[14] = 0;
         b[15] = 0;
 
-        // Encrypting b and adding the tag to the output
+        // Encrypting b and generating the tag
         self.cipher
             .encrypt_block(GenericArray::from_mut_slice(&mut b));
-
         let mut t = GenericArray::default();
-
         for i in 0..TagSize::to_usize() {
             t[i] = tag[i] ^ b[i];
         }
@@ -140,10 +138,8 @@ where
         Ok(t)
     }
 
-    /// CCM decryption and tag verification procedure.
-    ///
-    /// `out` buffer must be at least (`payload.len()` - `c.mlen`) bytes long.
-    /// A slice to the decrypted output within the buffer will be returned.
+    /// In-place CCM decryption and verification of detached authentication
+    /// tag.
     fn decrypt_in_place_detached(
         &self,
         nonce: &GenericArray<u8, Self::NonceSize>,
@@ -682,6 +678,7 @@ mod tests {
                 06D5F6B61DAC38417E8D12CFDF926E0"
             ),
         };
+
         let ccm: CcmMode<U8> = CcmMode::new(v.key.into());
         let ciphertext = ccm
             .encrypt(
@@ -692,6 +689,7 @@ mod tests {
                 },
             )
             .unwrap();
+
         assert!(ccm
             .decrypt(
                 GenericArray::from_slice(&v.nonce),
@@ -775,7 +773,6 @@ mod tests {
                 },
             )
             .unwrap();
-
         let plaintext = ccm
             .decrypt(
                 GenericArray::from_slice(&v.nonce),
@@ -801,7 +798,6 @@ mod tests {
         };
 
         let ccm: CcmMode<U10> = CcmMode::new(v.key.into());
-
         let ciphertext = ccm
             .encrypt(
                 GenericArray::from_slice(&v.nonce),
@@ -811,7 +807,6 @@ mod tests {
                 },
             )
             .unwrap();
-
         let plaintext = ccm
             .decrypt(
                 GenericArray::from_slice(&v.nonce),
