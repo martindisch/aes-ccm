@@ -138,4 +138,4 @@ extern crate hex_literal;
 mod ccm;
 
 pub use aead::{self, Error};
-pub use ccm::CcmMode;
+pub use ccm::{CcmMode, CcmTagSize};
