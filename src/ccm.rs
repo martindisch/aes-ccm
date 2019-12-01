@@ -270,7 +270,7 @@ fn ccm_ctr_mode(payload: &mut [u8], ctr: &mut [u8], cipher: &Aes128) {
             cipher.encrypt_block(GenericArray::from_mut_slice(&mut buffer));
         }
         // Update the output
-        payload[i] = buffer[i % AES_BLOCK_SIZE] ^ payload[i];
+        payload[i] ^= buffer[i % AES_BLOCK_SIZE];
     }
 
     // Update the counter
