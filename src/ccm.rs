@@ -31,6 +31,13 @@ impl CcmTagSize for U14 {}
 impl CcmTagSize for U16 {}
 
 /// The AES-CCM instance.
+///
+/// This is currently fixed to 128-bit keys and 13-byte nonces (and thus limited to 64KiB
+/// messages), and generic over tag sizes.
+///
+/// In terms of [COSE](https://tools.ietf.org/html/rfc8152#section-10.2), it implements
+/// AES-CCM-16-x-128, with x being the TagSize in bits. That is, `AesCcm<U8>` implements
+/// AES-CCM-16-64-128, and `AesCcm<U16>` imlements AES-CCM-16-128-128.
 pub struct AesCcm<TagSize>
 where
     TagSize: CcmTagSize,
