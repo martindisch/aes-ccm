@@ -1,7 +1,7 @@
 //! AES-CCM implementation.
 
-use aes::block_cipher::{BlockCipher, NewBlockCipher};
-use aes::Aes128;
+use aes::block_cipher::{Block, BlockCipher, NewBlockCipher};
+use aes::{Aes128, Aes256};
 
 use aead::consts::{U0, U10, U12, U13, U14, U16, U4, U6, U8};
 use aead::generic_array::{ArrayLength, GenericArray};
@@ -30,43 +30,57 @@ impl CcmTagSize for U12 {}
 impl CcmTagSize for U14 {}
 impl CcmTagSize for U16 {}
 
-/// The AES-CCM instance.
-///
-/// This is currently fixed to 128-bit keys and 13-byte nonces (and thus
-/// limited to 64KiB messages), and generic over tag sizes.
+/// AES-CCM with a 128-bit key.
 ///
 /// In terms of [COSE](https://tools.ietf.org/html/rfc8152#section-10.2), it
 /// implements AES-CCM-16-x-128, with x being the TagSize in bits. That is,
-/// `AesCcm<U8>` implements AES-CCM-16-64-128, and `AesCcm<U16>` imlements
+/// `Aes128Ccm<U8>` implements AES-CCM-16-64-128, and `Aes128Ccm<U16>` implements
 /// AES-CCM-16-128-128.
-pub struct AesCcm<TagSize>
+pub type Aes128Ccm<TagSize> = AesCcm<Aes128, TagSize>;
+
+/// AES-CCM with a 256-bit key.
+pub type Aes256Ccm<TagSize> = AesCcm<Aes256, TagSize>;
+
+/// The AES-CCM instance.
+///
+/// This is currently fixed to 13-byte nonces (and thus limited to 64KiB
+/// messages), and generic over a block cipher type (i.e. for different key
+/// sizes or potentially providing a hardware AES implementation) as well
+/// as tag sizes.
+pub struct AesCcm<Aes, TagSize>
 where
+    Aes: BlockCipher<BlockSize = U16>,
+    Aes::ParBlocks: ArrayLength<Block<Aes>>,
     TagSize: CcmTagSize,
 {
-    /// The AES-128 instance to use.
-    cipher: Aes128,
+    /// The AES block cipher instance to use.
+    cipher: Aes,
 
     /// Tag size.
     tag_size: PhantomData<TagSize>,
 }
 
-impl<TagSize> NewAead for AesCcm<TagSize>
+impl<Aes, TagSize> NewAead for AesCcm<Aes, TagSize>
 where
+    Aes: BlockCipher<BlockSize = U16> + NewBlockCipher,
+    Aes::ParBlocks: ArrayLength<Block<Aes>>,
     TagSize: CcmTagSize,
 {
-    type KeySize = U16;
+    type KeySize = Aes::KeySize;
 
     /// Creates a new `AesCcm`.
     fn new(key: &Key<Self>) -> Self {
         AesCcm {
-            cipher: Aes128::new(key),
+            cipher: Aes::new(key),
             tag_size: PhantomData,
         }
     }
 }
 
-impl<TagSize> AeadInPlace for AesCcm<TagSize>
+impl<Aes, TagSize> AeadInPlace for AesCcm<Aes, TagSize>
 where
+    Aes: BlockCipher<BlockSize = U16>,
+    Aes::ParBlocks: ArrayLength<Block<Aes>>,
     TagSize: CcmTagSize,
 {
     type NonceSize = U13;
@@ -230,7 +244,11 @@ where
 }
 
 /// Variation of CBC-MAC mode used in CCM.
-fn ccm_cbc_mac(t: &mut [u8; 16], data: &[u8], flag: bool, cipher: &Aes128) {
+fn ccm_cbc_mac<Aes>(t: &mut [u8; 16], data: &[u8], flag: bool, cipher: &Aes)
+where
+    Aes: BlockCipher<BlockSize = U16>,
+    Aes::ParBlocks: ArrayLength<Block<Aes>>,
+{
     let mut dlen = data.len();
 
     let mut i = if flag {
@@ -258,7 +276,11 @@ fn ccm_cbc_mac(t: &mut [u8; 16], data: &[u8], flag: bool, cipher: &Aes128) {
 /// mode (the counter is increased before encryption, instead of after
 /// encryption). Besides, it is assumed that the counter is stored in the last
 /// 2 bytes of the nonce.
-fn ccm_ctr_mode(payload: &mut [u8], ctr: &mut [u8], cipher: &Aes128) {
+fn ccm_ctr_mode<Aes>(payload: &mut [u8], ctr: &mut [u8], cipher: &Aes)
+where
+    Aes: BlockCipher<BlockSize = U16>,
+    Aes::ParBlocks: ArrayLength<Block<Aes>>,
+{
     let plen = payload.len();
 
     let mut buffer = [0u8; AES_BLOCK_SIZE];
@@ -661,7 +683,7 @@ mod tests {
             ),
         };
 
-        let ccm: AesCcm<U8> = AesCcm::new(&v.key.into());
+        let ccm: Aes128Ccm<U8> = Aes128Ccm::new(&v.key.into());
         assert!(ccm
             .encrypt(
                 GenericArray::from_slice(&v.nonce),
@@ -688,7 +710,7 @@ mod tests {
             ),
         };
 
-        let ccm: AesCcm<U8> = AesCcm::new(&v.key.into());
+        let ccm: Aes128Ccm<U8> = Aes128Ccm::new(&v.key.into());
         let ciphertext = ccm
             .encrypt(
                 GenericArray::from_slice(&v.nonce),
@@ -725,7 +747,7 @@ mod tests {
             ),
         };
 
-        let ccm: AesCcm<U8> = AesCcm::new(&v.key.into());
+        let ccm: Aes128Ccm<U8> = Aes128Ccm::new(&v.key.into());
         let mut ciphertext = ccm
             .encrypt(
                 GenericArray::from_slice(&v.nonce),
@@ -772,7 +794,7 @@ mod tests {
             expected: &[],
         };
 
-        let ccm: AesCcm<U10> = AesCcm::new(&v.key.into());
+        let ccm: Aes128Ccm<U10> = Aes128Ccm::new(&v.key.into());
         let ciphertext = ccm
             .encrypt(
                 GenericArray::from_slice(&v.nonce),
@@ -806,7 +828,7 @@ mod tests {
             expected: &[],
         };
 
-        let ccm: AesCcm<U10> = AesCcm::new(&v.key.into());
+        let ccm: Aes128Ccm<U10> = Aes128Ccm::new(&v.key.into());
         let ciphertext = ccm
             .encrypt(
                 GenericArray::from_slice(&v.nonce),
@@ -841,7 +863,7 @@ mod tests {
 
     fn test_vector<TagSize: CcmTagSize>(v: TestVector) {
         assert_eq!(v.mac_len, TagSize::to_usize());
-        let ccm = AesCcm::<TagSize>::new(&v.key.into());
+        let ccm = Aes128Ccm::<TagSize>::new(&v.key.into());
 
         let ciphertext = ccm
             .encrypt(
