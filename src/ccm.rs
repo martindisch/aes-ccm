@@ -1,11 +1,11 @@
 //! AES-CCM implementation.
 
-use aes::block_cipher_trait::BlockCipher;
+use aes::block_cipher::{BlockCipher, NewBlockCipher};
 use aes::Aes128;
 
-use aead::generic_array::typenum::{U0, U10, U12, U13, U14, U16, U4, U6, U8};
+use aead::consts::{U0, U10, U12, U13, U14, U16, U4, U6, U8};
 use aead::generic_array::{ArrayLength, GenericArray};
-use aead::{Aead, Error, NewAead};
+use aead::{AeadInPlace, Error, Key, NewAead, Nonce, Tag};
 
 use core::marker::PhantomData;
 
@@ -57,15 +57,15 @@ where
     type KeySize = U16;
 
     /// Creates a new `AesCcm`.
-    fn new(key: GenericArray<u8, U16>) -> Self {
+    fn new(key: &Key<Self>) -> Self {
         AesCcm {
-            cipher: Aes128::new(&key),
+            cipher: Aes128::new(key),
             tag_size: PhantomData,
         }
     }
 }
 
-impl<TagSize> Aead for AesCcm<TagSize>
+impl<TagSize> AeadInPlace for AesCcm<TagSize>
 where
     TagSize: CcmTagSize,
 {
@@ -76,10 +76,10 @@ where
     /// In-place CCM encryption and generation of detached authentication tag.
     fn encrypt_in_place_detached(
         &self,
-        nonce: &GenericArray<u8, Self::NonceSize>,
+        nonce: &Nonce<U13>,
         associated_data: &[u8],
         payload: &mut [u8],
-    ) -> Result<GenericArray<u8, TagSize>, Error> {
+    ) -> Result<Tag<Self::TagSize>, Error> {
         let alen = associated_data.len();
         let plen = payload.len();
         let tlen = TagSize::to_usize();
@@ -289,6 +289,7 @@ fn ccm_ctr_mode(payload: &mut [u8], ctr: &mut [u8], cipher: &Aes128) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use aead::Aead;
 
     // RFC 3610 test vectors --------------------------------------------------
 
@@ -660,7 +661,7 @@ mod tests {
             ),
         };
 
-        let ccm: AesCcm<U8> = AesCcm::new(v.key.into());
+        let ccm: AesCcm<U8> = AesCcm::new(&v.key.into());
         assert!(ccm
             .encrypt(
                 GenericArray::from_slice(&v.nonce),
@@ -687,7 +688,7 @@ mod tests {
             ),
         };
 
-        let ccm: AesCcm<U8> = AesCcm::new(v.key.into());
+        let ccm: AesCcm<U8> = AesCcm::new(&v.key.into());
         let ciphertext = ccm
             .encrypt(
                 GenericArray::from_slice(&v.nonce),
@@ -724,7 +725,7 @@ mod tests {
             ),
         };
 
-        let ccm: AesCcm<U8> = AesCcm::new(v.key.into());
+        let ccm: AesCcm<U8> = AesCcm::new(&v.key.into());
         let mut ciphertext = ccm
             .encrypt(
                 GenericArray::from_slice(&v.nonce),
@@ -771,7 +772,7 @@ mod tests {
             expected: &[],
         };
 
-        let ccm: AesCcm<U10> = AesCcm::new(v.key.into());
+        let ccm: AesCcm<U10> = AesCcm::new(&v.key.into());
         let ciphertext = ccm
             .encrypt(
                 GenericArray::from_slice(&v.nonce),
@@ -805,7 +806,7 @@ mod tests {
             expected: &[],
         };
 
-        let ccm: AesCcm<U10> = AesCcm::new(v.key.into());
+        let ccm: AesCcm<U10> = AesCcm::new(&v.key.into());
         let ciphertext = ccm
             .encrypt(
                 GenericArray::from_slice(&v.nonce),
@@ -840,7 +841,7 @@ mod tests {
 
     fn test_vector<TagSize: CcmTagSize>(v: TestVector) {
         assert_eq!(v.mac_len, TagSize::to_usize());
-        let ccm = AesCcm::<TagSize>::new(v.key.into());
+        let ccm = AesCcm::<TagSize>::new(&v.key.into());
 
         let ciphertext = ccm
             .encrypt(
