@@ -21,7 +21,7 @@
 //! ## Usage
 //! ```rust
 //! use aes_ccm::{
-//!     aead::{generic_array::typenum::U8, Aead, NewAead, Payload},
+//!     aead::{consts::U8, Aead, NewAead, Payload},
 //!     AesCcm,
 //! };
 //!
@@ -31,7 +31,7 @@
 //! ];
 //!
 //! // `U8` represents the tag size as a `typenum` unsigned (8-bytes here)
-//! let ccm = AesCcm::<U8>::new(key.into());
+//! let ccm = AesCcm::<U8>::new(&key.into());
 //!
 //! let nonce = [
 //!     0x00, 0x00, 0x00, 0x03, 0x02, 0x01, 0x00, 0xA0, 0xA1, 0xA2, 0xA3,
@@ -82,11 +82,13 @@
 //! and decrypt methods:
 //!
 //! ```rust
+//! # #[cfg(feature = "heapless")]
+//! # {
 //! use aes_ccm::{
 //!     aead::{
-//!         generic_array::typenum::{U128, U8},
+//!         consts::{U128, U8},
 //!         heapless::Vec,
-//!         Aead, NewAead,
+//!         AeadInPlace, NewAead,
 //!     },
 //!     AesCcm,
 //! };
@@ -97,7 +99,7 @@
 //! ];
 //!
 //! // `U8` represents the tag size as a `typenum` unsigned (8-bytes here)
-//! let ccm = AesCcm::<U8>::new(key.into());
+//! let ccm = AesCcm::<U8>::new(&key.into());
 //!
 //! let nonce = [
 //!     0x00, 0x00, 0x00, 0x03, 0x02, 0x01, 0x00, 0xA0, 0xA1, 0xA2, 0xA3,
@@ -125,6 +127,7 @@
 //! ccm.decrypt_in_place(&nonce.into(), &associated_data, &mut buffer)
 //!     .unwrap();
 //! assert_eq!(&buffer, &plaintext);
+//! # }
 //! ```
 //!
 //! ## Security
