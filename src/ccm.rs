@@ -313,8 +313,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    #[cfg(feature = "alloc")]
     use aead::Aead;
+
+    use super::*;
 
     // RFC 3610 test vectors --------------------------------------------------
 
@@ -671,6 +673,7 @@ mod tests {
     // Assorted other tests ---------------------------------------------------
 
     #[test]
+    #[cfg(all(feature = "aes", feature = "alloc"))]
     fn encryption_sanity() {
         // Testing for too large associated data
         let v = TestVector {
@@ -699,6 +702,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(all(feature = "aes", feature = "alloc"))]
     fn decryption_sanity() {
         // Testing for too large associated data
         let v = TestVector {
@@ -737,6 +741,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(all(feature = "aes", feature = "alloc"))]
     fn verification_fail() {
         let v = TestVector {
             key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
@@ -785,6 +790,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(all(feature = "aes", feature = "alloc"))]
     fn no_ad() {
         let v = TestVector {
             key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
@@ -820,6 +826,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(all(feature = "aes", feature = "alloc"))]
     fn no_payload() {
         let v = TestVector {
             key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
@@ -864,6 +871,7 @@ mod tests {
         expected: &'a [u8],
     }
 
+    #[cfg(all(feature = "aes", feature = "alloc"))]
     fn test_vector<TagSize: CcmTagSize>(v: TestVector) {
         assert_eq!(v.mac_len, TagSize::to_usize());
         let ccm = Aes128Ccm::<TagSize>::new(&v.key.into());
@@ -889,5 +897,24 @@ mod tests {
             )
             .unwrap();
         assert_eq!(&v.data[..], plaintext.as_slice());
+    }
+
+    #[cfg(all(feature = "aes", feature = "heapless"))]
+    fn test_vector<TagSize: CcmTagSize>(v: TestVector) {
+        use aead::{consts::U128, heapless::Vec};
+
+        assert_eq!(v.mac_len, TagSize::to_usize());
+        let ccm = Aes128Ccm::<TagSize>::new(&v.key.into());
+
+        let mut buffer: Vec<u8, U128> = Vec::new();
+        buffer.extend_from_slice(v.data).unwrap();
+
+        ccm.encrypt_in_place(&v.nonce.into(), v.hdr, &mut buffer)
+            .unwrap();
+        assert_eq!(&v.expected[..], &buffer[..v.expected.len()]);
+
+        ccm.decrypt_in_place(&v.nonce.into(), v.hdr, &mut buffer)
+            .unwrap();
+        assert_eq!(&v.data[..], &buffer[..v.data.len()]);
     }
 }

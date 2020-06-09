@@ -22,6 +22,8 @@
 //!
 //! ## Usage
 //! ```rust
+//! # #[cfg(all(feature = "aes", feature = "alloc"))]
+//! # {
 //! use aes_ccm::{
 //!     aead::{consts::U8, Aead, NewAead, Payload},
 //!     Aes128Ccm,
@@ -67,6 +69,7 @@
 //!     .unwrap();
 //!
 //! assert_eq!(&msg[..], plaintext.as_slice());
+//! # }
 //! ```
 //!
 //! ## In-place Usage (eliminates `alloc` requirement)
@@ -84,7 +87,7 @@
 //! and decrypt methods:
 //!
 //! ```rust
-//! # #[cfg(feature = "heapless")]
+//! # #[cfg(all(feature = "aes", feature = "heapless"))]
 //! # {
 //! use aes_ccm::{
 //!     aead::{
@@ -92,7 +95,7 @@
 //!         heapless::Vec,
 //!         AeadInPlace, NewAead,
 //!     },
-//!     AesCcm,
+//!     Aes128Ccm
 //! };
 //!
 //! let key = [
