@@ -22,7 +22,7 @@
 //! ```rust
 //! use aes_ccm::{
 //!     aead::{consts::U8, Aead, NewAead, Payload},
-//!     AesCcm,
+//!     Aes128Ccm,
 //! };
 //!
 //! let key = [
@@ -31,7 +31,7 @@
 //! ];
 //!
 //! // `U8` represents the tag size as a `typenum` unsigned (8-bytes here)
-//! let ccm = AesCcm::<U8>::new(&key.into());
+//! let ccm = Aes128Ccm::<U8>::new(&key.into());
 //!
 //! let nonce = [
 //!     0x00, 0x00, 0x00, 0x03, 0x02, 0x01, 0x00, 0xA0, 0xA1, 0xA2, 0xA3,
@@ -99,7 +99,7 @@
 //! ];
 //!
 //! // `U8` represents the tag size as a `typenum` unsigned (8-bytes here)
-//! let ccm = AesCcm::<U8>::new(&key.into());
+//! let ccm = Aes128Ccm::<U8>::new(&key.into());
 //!
 //! let nonce = [
 //!     0x00, 0x00, 0x00, 0x03, 0x02, 0x01, 0x00, 0xA0, 0xA1, 0xA2, 0xA3,
@@ -166,4 +166,4 @@ extern crate hex_literal;
 mod ccm;
 
 pub use aead::{self, Error};
-pub use ccm::{AesCcm, CcmTagSize};
+pub use ccm::{Aes128Ccm, Aes256Ccm, AesCcm, CcmTagSize};
