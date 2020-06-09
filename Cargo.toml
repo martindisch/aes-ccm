@@ -18,13 +18,18 @@ edition = "2018"
 
 [dependencies]
 aead = { version = "0.3", default-features = false }
-aes = "0.4.0"
+aes = { version = "0.4.0", optional = true }
+block-cipher = { version = "0.7", default-features = false }
 subtle = { version = "2", default-features = false }
 
 [dev-dependencies]
 hex-literal = "0.2.0"
 
 [features]
-default = ["alloc"]
+default = ["aes", "alloc"]
 alloc = ["aead/alloc"]
 heapless = ["aead/heapless"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

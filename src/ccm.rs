@@ -1,11 +1,10 @@
 //! AES-CCM implementation.
 
-use aes::block_cipher::{Block, BlockCipher, NewBlockCipher};
-use aes::{Aes128, Aes256};
-
 use aead::consts::{U0, U10, U12, U13, U14, U16, U4, U6, U8};
 use aead::generic_array::{ArrayLength, GenericArray};
 use aead::{AeadInPlace, Error, Key, NewAead, Nonce, Tag};
+
+use block_cipher::{Block, BlockCipher, NewBlockCipher};
 
 use core::marker::PhantomData;
 
@@ -36,10 +35,14 @@ impl CcmTagSize for U16 {}
 /// implements AES-CCM-16-x-128, with x being the TagSize in bits. That is,
 /// `Aes128Ccm<U8>` implements AES-CCM-16-64-128, and `Aes128Ccm<U16>` implements
 /// AES-CCM-16-128-128.
-pub type Aes128Ccm<TagSize> = AesCcm<Aes128, TagSize>;
+#[cfg(feature = "aes")]
+#[cfg_attr(docsrs, doc(cfg(feature = "aes")))]
+pub type Aes128Ccm<TagSize> = AesCcm<aes::Aes128, TagSize>;
 
 /// AES-CCM with a 256-bit key.
-pub type Aes256Ccm<TagSize> = AesCcm<Aes256, TagSize>;
+#[cfg(feature = "aes")]
+#[cfg_attr(docsrs, doc(cfg(feature = "aes")))]
+pub type Aes256Ccm<TagSize> = AesCcm<aes::Aes256, TagSize>;
 
 /// The AES-CCM instance.
 ///
