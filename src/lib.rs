@@ -1,7 +1,9 @@
 //! A pure-Rust, `#![no_std]`, zero-allocation AES-CCM implementation ported
-//! from [TinyCrypt] using [RustCrypto's AES].
-//! It implements the [`Aead`] trait, so it can be used effortlessly together
-//! with other implementations.
+//! from [TinyCrypt] using [RustCrypto's AES] (with support for optionally
+//! swapping in hardware-backed implementations).
+//!
+//! It implements the [`aead::AeadInPlace`] trait, so it can be used
+//! effortlessly together with other implementations.
 //!
 //! ## Overview
 //! CCM (for "Counter with CBC-MAC") mode is a NIST approved mode of operation
@@ -71,13 +73,13 @@
 //! This crate has an optional `alloc` feature which can be disabled in e.g.
 //! microcontroller environments that don't have a heap.
 //!
-//! The [`Aead::encrypt_in_place`] and [`Aead::decrypt_in_place`]
+//! The [`AeadInPlace::encrypt_in_place`] and [`AeadInPlace::decrypt_in_place`]
 //! methods accept any type that impls the [`aead::Buffer`] trait which
 //! contains the plaintext for encryption or ciphertext for decryption.
 //!
 //! Note that if you enable the `heapless` feature of this crate,
-//! you will receive an impl of `aead::Buffer` for [`heapless::Vec`]
-//! (re-exported from the `aead` crate as `aead::heapless::Vec`),
+//! you will receive an impl of [`aead::Buffer`] for [`heapless::Vec`]
+//! (re-exported from the [`aead`] crate as `aead::heapless::Vec`),
 //! which can then be passed as the `buffer` parameter to the in-place encrypt
 //! and decrypt methods:
 //!
@@ -149,15 +151,14 @@
 //!
 //! [TinyCrypt]: https://github.com/intel/tinycrypt
 //! [RustCrypto's AES]: https://github.com/RustCrypto/block-ciphers
-//! [`Aead`]: https://docs.rs/aead/latest/aead/trait.Aead.html
 //! [SP 800-38C]: https://csrc.nist.gov/publications/detail/sp/800-38c/final
 //! [RFC 3610]: https://tools.ietf.org/html/rfc3610
-//! [`Aead::encrypt_in_place`]: https://docs.rs/aead/latest/aead/trait.Aead.html#method.encrypt_in_place
-//! [`Aead::decrypt_in_place`]: https://docs.rs/aead/latest/aead/trait.Aead.html#method.decrypt_in_place
-//! [`aead::Buffer`]: https://docs.rs/aead/latest/aead/trait.Buffer.html
+//! [`AeadInPlace::encrypt_in_place`]: aead::AeadInPlace::encrypt_in_place
+//! [`AeadInPlace::decrypt_in_place`]: aead::AeadInPlace::encrypt_in_place
 //! [`heapless::Vec`]: https://docs.rs/heapless/latest/heapless/struct.Vec.html
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(test)]
 #[macro_use]
@@ -166,4 +167,7 @@ extern crate hex_literal;
 mod ccm;
 
 pub use aead::{self, Error};
-pub use ccm::{Aes128Ccm, Aes256Ccm, AesCcm, CcmTagSize};
+pub use ccm::{AesCcm, CcmTagSize};
+
+#[cfg(feature = "aes")]
+pub use ccm::{Aes128Ccm, Aes256Ccm};
