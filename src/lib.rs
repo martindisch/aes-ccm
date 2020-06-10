@@ -157,7 +157,7 @@
 //! [SP 800-38C]: https://csrc.nist.gov/publications/detail/sp/800-38c/final
 //! [RFC 3610]: https://tools.ietf.org/html/rfc3610
 //! [`AeadInPlace::encrypt_in_place`]: aead::AeadInPlace::encrypt_in_place
-//! [`AeadInPlace::decrypt_in_place`]: aead::AeadInPlace::encrypt_in_place
+//! [`AeadInPlace::decrypt_in_place`]: aead::AeadInPlace::decrypt_in_place
 //! [`heapless::Vec`]: https://docs.rs/heapless/latest/heapless/struct.Vec.html
 
 #![no_std]
