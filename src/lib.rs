@@ -95,7 +95,7 @@
 //!         heapless::Vec,
 //!         AeadInPlace, NewAead,
 //!     },
-//!     Aes128Ccm
+//!     Aes128Ccm,
 //! };
 //!
 //! let key = [

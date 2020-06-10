@@ -32,14 +32,19 @@ impl CcmTagSize for U16 {}
 /// AES-CCM with a 128-bit key.
 ///
 /// In terms of [COSE](https://tools.ietf.org/html/rfc8152#section-10.2), it
-/// implements AES-CCM-16-x-128, with x being the TagSize in bits. That is,
-/// `Aes128Ccm<U8>` implements AES-CCM-16-64-128, and `Aes128Ccm<U16>` implements
-/// AES-CCM-16-128-128.
+/// implements AES-CCM-16-x-128, with x being the `TagSize` in bits. That is,
+/// `Aes128Ccm<U8>` implements AES-CCM-16-64-128, and `Aes128Ccm<U16>`
+/// implements AES-CCM-16-128-128.
 #[cfg(feature = "aes")]
 #[cfg_attr(docsrs, doc(cfg(feature = "aes")))]
 pub type Aes128Ccm<TagSize> = AesCcm<aes::Aes128, TagSize>;
 
 /// AES-CCM with a 256-bit key.
+///
+/// In terms of [COSE](https://tools.ietf.org/html/rfc8152#section-10.2), it
+/// implements AES-CCM-16-x-256, with x being the `TagSize` in bits. That is,
+/// `Aes256Ccm<U8>` implements AES-CCM-16-64-256, and `Aes256Ccm<U16>`
+/// implements AES-CCM-16-128-256.
 #[cfg(feature = "aes")]
 #[cfg_attr(docsrs, doc(cfg(feature = "aes")))]
 pub type Aes256Ccm<TagSize> = AesCcm<aes::Aes256, TagSize>;
