@@ -163,10 +163,6 @@
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-#[cfg(test)]
-#[macro_use]
-extern crate hex_literal;
-
 mod ccm;
 
 pub use aead::{self, Error};

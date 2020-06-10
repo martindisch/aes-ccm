@@ -315,6 +315,7 @@ where
 mod tests {
     #[cfg(feature = "alloc")]
     use aead::Aead;
+    use hex_literal::hex;
 
     use super::*;
 
