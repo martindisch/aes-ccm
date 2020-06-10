@@ -160,7 +160,7 @@
 //! [`AeadInPlace::decrypt_in_place`]: aead::AeadInPlace::encrypt_in_place
 //! [`heapless::Vec`]: https://docs.rs/heapless/latest/heapless/struct.Vec.html
 
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(test)]
