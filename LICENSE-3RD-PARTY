@@ -40,6 +40,7 @@ applies to:
 - aes, Copyright (c) 2018 Artyom Pavlov
 - aead, Copyright (c) 2019 The RustCrypto Project Developers
         Copyright (c) 2019 MobileCoin, LLC
+- block-cipher, Copyright (c) 2016 Artyom Pavlov
 - hex-literal, Copyright (c) 2018 Artyom Pavlov
                Copyright (c) 2018 The RustCrypto Project Developers
 -------------------------------------------------------------------------------
@@ -67,6 +68,7 @@ The Apache License
 applies to:
 - aes
 - aead
+- block-cipher
 - hex-literal
 -------------------------------------------------------------------------------
                                  Apache License
