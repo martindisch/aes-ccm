@@ -154,11 +154,14 @@
 //!
 //! [TinyCrypt]: https://github.com/intel/tinycrypt
 //! [RustCrypto's AES]: https://github.com/RustCrypto/block-ciphers
+//! [`aead::AeadInPlace`]: aead::AeadInPlace
 //! [SP 800-38C]: https://csrc.nist.gov/publications/detail/sp/800-38c/final
 //! [RFC 3610]: https://tools.ietf.org/html/rfc3610
 //! [`AeadInPlace::encrypt_in_place`]: aead::AeadInPlace::encrypt_in_place
 //! [`AeadInPlace::decrypt_in_place`]: aead::AeadInPlace::decrypt_in_place
+//! [`aead::Buffer`]: aead::Buffer
 //! [`heapless::Vec`]: https://docs.rs/heapless/latest/heapless/struct.Vec.html
+//! [`aead`]: aead
 
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
