@@ -698,7 +698,7 @@ mod tests {
         let ccm: Aes128Ccm<U8> = Aes128Ccm::new(&v.key.into());
         assert!(ccm
             .encrypt(
-                GenericArray::from_slice(&v.nonce),
+                &v.nonce.into(),
                 aead::Payload {
                     aad: &v.hdr,
                     msg: &v.data
@@ -726,7 +726,7 @@ mod tests {
         let ccm: Aes128Ccm<U8> = Aes128Ccm::new(&v.key.into());
         let ciphertext = ccm
             .encrypt(
-                GenericArray::from_slice(&v.nonce),
+                &v.nonce.into(),
                 aead::Payload {
                     aad: &v.hdr,
                     msg: &v.data,
@@ -736,7 +736,7 @@ mod tests {
 
         assert!(ccm
             .decrypt(
-                GenericArray::from_slice(&v.nonce),
+                &v.nonce.into(),
                 aead::Payload {
                     // This is above the maximum allowed size
                     aad: &[0u8; 66000],
@@ -764,7 +764,7 @@ mod tests {
         let ccm: Aes128Ccm<U8> = Aes128Ccm::new(&v.key.into());
         let mut ciphertext = ccm
             .encrypt(
-                GenericArray::from_slice(&v.nonce),
+                &v.nonce.into(),
                 aead::Payload {
                     aad: &v.hdr,
                     msg: &v.data,
@@ -774,7 +774,7 @@ mod tests {
 
         assert!(ccm
             .decrypt(
-                GenericArray::from_slice(&v.nonce),
+                &v.nonce.into(),
                 aead::Payload {
                     // This associated data has been tampered with
                     aad: &hex!("0001020304050608"),
@@ -786,7 +786,7 @@ mod tests {
         ciphertext[10] = 0xFF;
         assert!(ccm
             .decrypt(
-                GenericArray::from_slice(&v.nonce),
+                &v.nonce.into(),
                 aead::Payload {
                     aad: &v.hdr,
                     msg: &ciphertext
@@ -812,7 +812,7 @@ mod tests {
         let ccm: Aes128Ccm<U10> = Aes128Ccm::new(&v.key.into());
         let ciphertext = ccm
             .encrypt(
-                GenericArray::from_slice(&v.nonce),
+                &v.nonce.into(),
                 aead::Payload {
                     aad: &v.hdr,
                     msg: &v.data,
@@ -821,7 +821,7 @@ mod tests {
             .unwrap();
         let plaintext = ccm
             .decrypt(
-                GenericArray::from_slice(&v.nonce),
+                &v.nonce.into(),
                 aead::Payload {
                     aad: &v.hdr,
                     msg: &ciphertext,
@@ -847,7 +847,7 @@ mod tests {
         let ccm: Aes128Ccm<U10> = Aes128Ccm::new(&v.key.into());
         let ciphertext = ccm
             .encrypt(
-                GenericArray::from_slice(&v.nonce),
+                &v.nonce.into(),
                 aead::Payload {
                     aad: &v.hdr,
                     msg: &v.data,
@@ -856,7 +856,7 @@ mod tests {
             .unwrap();
         let plaintext = ccm
             .decrypt(
-                GenericArray::from_slice(&v.nonce),
+                &v.nonce.into(),
                 aead::Payload {
                     aad: &v.hdr,
                     msg: &ciphertext,
@@ -884,7 +884,7 @@ mod tests {
 
         let ciphertext = ccm
             .encrypt(
-                GenericArray::from_slice(&v.nonce),
+                &v.nonce.into(),
                 aead::Payload {
                     aad: &v.hdr,
                     msg: &v.data,
@@ -895,7 +895,7 @@ mod tests {
 
         let plaintext = ccm
             .decrypt(
-                GenericArray::from_slice(&v.nonce),
+                &v.nonce.into(),
                 aead::Payload {
                     aad: &v.hdr,
                     msg: &ciphertext,
