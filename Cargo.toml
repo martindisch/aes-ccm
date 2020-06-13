@@ -7,6 +7,7 @@ TinyCrypt using RustCrypto's AES.
 version = "0.4.1"
 authors = [
     "Martin Disch <martindisch@gmail.com>",
+    "Tony Arcieri <bascule@gmail.com>",
     "Arnaud Durand <arnaud.durand@unifr.ch>"
 ]
 repository = "https://github.com/martindisch/aes-ccm"
