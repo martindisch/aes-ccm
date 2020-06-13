@@ -328,352 +328,320 @@ mod tests {
 
     #[test]
     fn test_vector_1() {
-        test_vector::<U8, [u8; 16]>(TestVector {
-            key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
-            nonce: hex!("00000003020100A0A1A2A3A4A5"),
-            hdr: &hex!("0001020304050607"),
-            data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E"),
-            expected: &hex!(
+        test_vector::<U8, [u8; 16]>(
+            hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
+            hex!("00000003020100A0A1A2A3A4A5"),
+            &hex!("0001020304050607"),
+            &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E"),
+            &hex!(
                 "588C979A61C663D2F066D0C2C0F9898
                 06D5F6B61DAC38417E8D12CFDF926E0"
             ),
-            marker: PhantomData,
-        });
+        );
     }
 
     #[test]
     fn test_vector_2() {
-        test_vector::<U8, [u8; 16]>(TestVector {
-            key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
-            nonce: hex!("00000004030201A0A1A2A3A4A5"),
-            hdr: &hex!("0001020304050607"),
-            data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F"),
-            expected: &hex!(
+        test_vector::<U8, [u8; 16]>(
+            hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
+            hex!("00000004030201A0A1A2A3A4A5"),
+            &hex!("0001020304050607"),
+            &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F"),
+            &hex!(
                 "72C91A36E135F8CF291CA894085C87E
                 3CC15C439C9E43A3BA091D56E10400916"
             ),
-            marker: PhantomData,
-        });
+        );
     }
 
     #[test]
     fn test_vector_3() {
-        test_vector::<U8, [u8; 16]>(TestVector {
-            key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
-            nonce: hex!("00000005040302A0A1A2A3A4A5"),
-            hdr: &hex!("0001020304050607"),
-            data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F20"),
-            expected: &hex!(
+        test_vector::<U8, [u8; 16]>(
+            hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
+            hex!("00000005040302A0A1A2A3A4A5"),
+            &hex!("0001020304050607"),
+            &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F20"),
+            &hex!(
                 "51B1E5F44A197D1DA46B0F8E2D282AE87
                 1E838BB64DA8596574ADAA76FBD9FB0C5"
             ),
-            marker: PhantomData,
-        });
+        );
     }
 
     #[test]
     fn test_vector_4() {
-        test_vector::<U8, [u8; 16]>(TestVector {
-            key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
-            nonce: hex!("00000006050403A0A1A2A3A4A5"),
-            hdr: &hex!("000102030405060708090A0B"),
-            data: &hex!("0C0D0E0F101112131415161718191A1B1C1D1E"),
-            expected: &hex!(
-                "A28C6865939A9A79FAAA5C4C2A9D4A91CDAC8C96C861B9C9E61EF1"
-            ),
-            marker: PhantomData,
-        });
+        test_vector::<U8, [u8; 16]>(
+            hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
+            hex!("00000006050403A0A1A2A3A4A5"),
+            &hex!("000102030405060708090A0B"),
+            &hex!("0C0D0E0F101112131415161718191A1B1C1D1E"),
+            &hex!("A28C6865939A9A79FAAA5C4C2A9D4A91CDAC8C96C861B9C9E61EF1"),
+        );
     }
 
     #[test]
     fn test_vector_5() {
-        test_vector::<U8, [u8; 16]>(TestVector {
-            key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
-            nonce: hex!("00000007060504A0A1A2A3A4A5"),
-            hdr: &hex!("000102030405060708090A0B"),
-            data: &hex!("0C0D0E0F101112131415161718191A1B1C1D1E1F"),
-            expected: &hex!(
-                "DCF1FB7B5D9E23FB9D4E131253658AD86EBDCA3E51E83F077D9C2D93"
-            ),
-            marker: PhantomData,
-        });
+        test_vector::<U8, [u8; 16]>(
+            hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
+            hex!("00000007060504A0A1A2A3A4A5"),
+            &hex!("000102030405060708090A0B"),
+            &hex!("0C0D0E0F101112131415161718191A1B1C1D1E1F"),
+            &hex!("DCF1FB7B5D9E23FB9D4E131253658AD86EBDCA3E51E83F077D9C2D93"),
+        );
     }
 
     #[test]
     fn test_vector_6() {
-        test_vector::<U8, [u8; 16]>(TestVector {
-            key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
-            nonce: hex!("00000008070605A0A1A2A3A4A5"),
-            hdr: &hex!("000102030405060708090A0B"),
-            data: &hex!("0C0D0E0F101112131415161718191A1B1C1D1E1F20"),
-            expected: &hex!(
+        test_vector::<U8, [u8; 16]>(
+            hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
+            hex!("00000008070605A0A1A2A3A4A5"),
+            &hex!("000102030405060708090A0B"),
+            &hex!("0C0D0E0F101112131415161718191A1B1C1D1E1F20"),
+            &hex!(
                 "6FC1B011F006568B5171A42D953D469B2570A4BD87405A0443AC91CB94"
             ),
-            marker: PhantomData,
-        });
+        );
     }
 
     #[test]
     fn test_vector_7() {
-        test_vector::<U10, [u8; 16]>(TestVector {
-            key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
-            nonce: hex!("00000009080706A0A1A2A3A4A5"),
-            hdr: &hex!("0001020304050607"),
-            data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E"),
-            expected: &hex!(
+        test_vector::<U10, [u8; 16]>(
+            hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
+            hex!("00000009080706A0A1A2A3A4A5"),
+            &hex!("0001020304050607"),
+            &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E"),
+            &hex!(
                 "0135D1B2C95F41D5D1D4FEC185D166B80
                 94E999DFED96C048C56602C97ACBB7490"
             ),
-            marker: PhantomData,
-        });
+        );
     }
 
     #[test]
     fn test_vector_8() {
-        test_vector::<U10, [u8; 16]>(TestVector {
-            key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
-            nonce: hex!("0000000A090807A0A1A2A3A4A5"),
-            hdr: &hex!("0001020304050607"),
-            data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F"),
-            expected: &hex!(
+        test_vector::<U10, [u8; 16]>(
+            hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
+            hex!("0000000A090807A0A1A2A3A4A5"),
+            &hex!("0001020304050607"),
+            &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F"),
+            &hex!(
                 "7B75399AC0831DD2F0BBD75879A2FD8F6C
                 AE6B6CD9B7DB24C17B4433F434963F34B4"
             ),
-            marker: PhantomData,
-        });
+        );
     }
 
     #[test]
     fn test_vector_9() {
-        test_vector::<U10, [u8; 16]>(TestVector {
-            key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
-            nonce: hex!("0000000B0A0908A0A1A2A3A4A5"),
-            hdr: &hex!("0001020304050607"),
-            data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F20"),
-            expected: &hex!(
+        test_vector::<U10, [u8; 16]>(
+            hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
+            hex!("0000000B0A0908A0A1A2A3A4A5"),
+            &hex!("0001020304050607"),
+            &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F20"),
+            &hex!(
                 "82531A60CC24945A4B8279181AB5C84DF21
                 CE7F9B73F42E197EA9C07E56B5EB17E5F4E"
             ),
-            marker: PhantomData,
-        });
+        );
     }
 
     #[test]
     fn test_vector_10() {
-        test_vector::<U10, [u8; 16]>(TestVector {
-            key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
-            nonce: hex!("0000000C0B0A09A0A1A2A3A4A5"),
-            hdr: &hex!("000102030405060708090A0B"),
-            data: &hex!("0C0D0E0F101112131415161718191A1B1C1D1E"),
-            expected: &hex!(
+        test_vector::<U10, [u8; 16]>(
+            hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
+            hex!("0000000C0B0A09A0A1A2A3A4A5"),
+            &hex!("000102030405060708090A0B"),
+            &hex!("0C0D0E0F101112131415161718191A1B1C1D1E"),
+            &hex!(
                 "07342594157785152B074098330ABB141B947B566AA9406B4D999988DD"
             ),
-            marker: PhantomData,
-        });
+        );
     }
 
     #[test]
     fn test_vector_11() {
-        test_vector::<U10, [u8; 16]>(TestVector {
-            key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
-            nonce: hex!("0000000D0C0B0AA0A1A2A3A4A5"),
-            hdr: &hex!("000102030405060708090A0B"),
-            data: &hex!("0C0D0E0F101112131415161718191A1B1C1D1E1F"),
-            expected: &hex!(
+        test_vector::<U10, [u8; 16]>(
+            hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
+            hex!("0000000D0C0B0AA0A1A2A3A4A5"),
+            &hex!("000102030405060708090A0B"),
+            &hex!("0C0D0E0F101112131415161718191A1B1C1D1E1F"),
+            &hex!(
                 "676BB20380B0E301E8AB79590A396DA78B834934F53AA2E9107A8B6C022C"
             ),
-            marker: PhantomData,
-        });
+        );
     }
 
     #[test]
     fn test_vector_12() {
-        test_vector::<U10, [u8; 16]>(TestVector {
-            key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
-            nonce: hex!("0000000E0D0C0BA0A1A2A3A4A5"),
-            hdr: &hex!("000102030405060708090A0B"),
-            data: &hex!("0C0D0E0F101112131415161718191A1B1C1D1E1F20"),
-            expected: &hex!(
+        test_vector::<U10, [u8; 16]>(
+            hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
+            hex!("0000000E0D0C0BA0A1A2A3A4A5"),
+            &hex!("000102030405060708090A0B"),
+            &hex!("0C0D0E0F101112131415161718191A1B1C1D1E1F20"),
+            &hex!(
                 "C0FFA0D6F05BDB67F24D43A4338D2AA
                 4BED7B20E43CD1AA31662E7AD65D6DB"
             ),
-            marker: PhantomData,
-        });
+        );
     }
 
     #[test]
     fn test_vector_13() {
-        test_vector::<U8, [u8; 16]>(TestVector {
-            key: hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
-            nonce: hex!("00412B4EA9CDBE3C9696766CFA"),
-            hdr: &hex!("0BE1A88BACE018B1"),
-            data: &hex!("08E8CF97D820EA258460E96AD9CF5289054D895CEAC47C"),
-            expected: &hex!(
+        test_vector::<U8, [u8; 16]>(
+            hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
+            hex!("00412B4EA9CDBE3C9696766CFA"),
+            &hex!("0BE1A88BACE018B1"),
+            &hex!("08E8CF97D820EA258460E96AD9CF5289054D895CEAC47C"),
+            &hex!(
                 "4CB97F86A2A4689A877947AB8091EF5
                 386A6FFBDD080F8E78CF7CB0CDDD7B3"
             ),
-            marker: PhantomData,
-        });
+        );
     }
 
     #[test]
     fn test_vector_14() {
-        test_vector::<U8, [u8; 16]>(TestVector {
-            key: hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
-            nonce: hex!("0033568EF7B2633C9696766CFA"),
-            hdr: &hex!("63018F76DC8A1BCB"),
-            data: &hex!("9020EA6F91BDD85AFA0039BA4BAFF9BFB79C7028949CD0EC"),
-            expected: &hex!(
+        test_vector::<U8, [u8; 16]>(
+            hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
+            hex!("0033568EF7B2633C9696766CFA"),
+            &hex!("63018F76DC8A1BCB"),
+            &hex!("9020EA6F91BDD85AFA0039BA4BAFF9BFB79C7028949CD0EC"),
+            &hex!(
                 "4CCB1E7CA981BEFAA0726C55D3780612
                 98C85C92814ABC33C52EE81D7D77C08A"
             ),
-            marker: PhantomData,
-        });
+        );
     }
 
     #[test]
     fn test_vector_15() {
-        test_vector::<U8, [u8; 16]>(TestVector {
-            key: hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
-            nonce: hex!("00103FE41336713C9696766CFA"),
-            hdr: &hex!("AA6CFA36CAE86B40"),
-            data: &hex!("B916E0EACC1C00D7DCEC68EC0B3BBB1A02DE8A2D1AA346132E"),
-            expected: &hex!(
+        test_vector::<U8, [u8; 16]>(
+            hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
+            hex!("00103FE41336713C9696766CFA"),
+            &hex!("AA6CFA36CAE86B40"),
+            &hex!("B916E0EACC1C00D7DCEC68EC0B3BBB1A02DE8A2D1AA346132E"),
+            &hex!(
                 "B1D23A2220DDC0AC900D9AA03C61FCF4A
                 559A4417767089708A776796EDB723506"
             ),
-            marker: PhantomData,
-        });
+        );
     }
 
     #[test]
     fn test_vector_16() {
-        test_vector::<U8, [u8; 16]>(TestVector {
-            key: hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
-            nonce: hex!("00764C63B8058E3C9696766CFA"),
-            hdr: &hex!("D0D0735C531E1BECF049C244"),
-            data: &hex!("12DAAC5630EFA5396F770CE1A66B21F7B2101C"),
-            expected: &hex!(
-                "14D253C3967B70609B7CBB7C499160283245269A6F49975BCADEAF"
-            ),
-            marker: PhantomData,
-        });
+        test_vector::<U8, [u8; 16]>(
+            hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
+            hex!("00764C63B8058E3C9696766CFA"),
+            &hex!("D0D0735C531E1BECF049C244"),
+            &hex!("12DAAC5630EFA5396F770CE1A66B21F7B2101C"),
+            &hex!("14D253C3967B70609B7CBB7C499160283245269A6F49975BCADEAF"),
+        );
     }
 
     #[test]
     fn test_vector_17() {
-        test_vector::<U8, [u8; 16]>(TestVector {
-            key: hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
-            nonce: hex!("00F8B678094E3B3C9696766CFA"),
-            hdr: &hex!("77B60F011C03E1525899BCAE"),
-            data: &hex!("E88B6A46C78D63E52EB8C546EFB5DE6F75E9CC0D"),
-            expected: &hex!(
-                "5545FF1A085EE2EFBF52B2E04BEE1E2336C73E3F762C0C7744FE7E3C"
-            ),
-            marker: PhantomData,
-        });
+        test_vector::<U8, [u8; 16]>(
+            hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
+            hex!("00F8B678094E3B3C9696766CFA"),
+            &hex!("77B60F011C03E1525899BCAE"),
+            &hex!("E88B6A46C78D63E52EB8C546EFB5DE6F75E9CC0D"),
+            &hex!("5545FF1A085EE2EFBF52B2E04BEE1E2336C73E3F762C0C7744FE7E3C"),
+        );
     }
 
     #[test]
     fn test_vector_18() {
-        test_vector::<U8, [u8; 16]>(TestVector {
-            key: hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
-            nonce: hex!("00D560912D3F703C9696766CFA"),
-            hdr: &hex!("CD9044D2B71FDB8120EA60C0"),
-            data: &hex!("6435ACBAFB11A82E2F071D7CA4A5EBD93A803BA87F"),
-            expected: &hex!(
+        test_vector::<U8, [u8; 16]>(
+            hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
+            hex!("00D560912D3F703C9696766CFA"),
+            &hex!("CD9044D2B71FDB8120EA60C0"),
+            &hex!("6435ACBAFB11A82E2F071D7CA4A5EBD93A803BA87F"),
+            &hex!(
                 "009769ECABDF48625594C59251E6035722675E04C847099E5AE0704551"
             ),
-            marker: PhantomData,
-        });
+        );
     }
 
     #[test]
     fn test_vector_19() {
-        test_vector::<U10, [u8; 16]>(TestVector {
-            key: hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
-            nonce: hex!("0042FFF8F1951C3C9696766CFA"),
-            hdr: &hex!("D85BC7E69F944FB8"),
-            data: &hex!("8A19B950BCF71A018E5E6701C91787659809D67DBEDD18"),
-            expected: &hex!(
+        test_vector::<U10, [u8; 16]>(
+            hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
+            hex!("0042FFF8F1951C3C9696766CFA"),
+            &hex!("D85BC7E69F944FB8"),
+            &hex!("8A19B950BCF71A018E5E6701C91787659809D67DBEDD18"),
+            &hex!(
                 "BC218DAA947427B6DB386A99AC1AEF23A
                 DE0B52939CB6A637CF9BEC2408897C6BA"
             ),
-            marker: PhantomData,
-        });
+        );
     }
 
     #[test]
     fn test_vector_20() {
-        test_vector::<U10, [u8; 16]>(TestVector {
-            key: hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
-            nonce: hex!("00920F40E56CDC3C9696766CFA"),
-            hdr: &hex!("74A0EBC9069F5B37"),
-            data: &hex!("1761433C37C5A35FC1F39F406302EB907C6163BE38C98437"),
-            expected: &hex!(
+        test_vector::<U10, [u8; 16]>(
+            hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
+            hex!("00920F40E56CDC3C9696766CFA"),
+            &hex!("74A0EBC9069F5B37"),
+            &hex!("1761433C37C5A35FC1F39F406302EB907C6163BE38C98437"),
+            &hex!(
                 "5810E6FD25874022E80361A478E3E9CF48
                 4AB04F447EFFF6F0A477CC2FC9BF548944"
             ),
-            marker: PhantomData,
-        });
+        );
     }
 
     #[test]
     fn test_vector_21() {
-        test_vector::<U10, [u8; 16]>(TestVector {
-            key: hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
-            nonce: hex!("0027CA0C7120BC3C9696766CFA"),
-            hdr: &hex!("44A3AA3AAE6475CA"),
-            data: &hex!("A434A8E58500C6E41530538862D686EA9E81301B5AE4226BFA"),
-            expected: &hex!(
+        test_vector::<U10, [u8; 16]>(
+            hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
+            hex!("0027CA0C7120BC3C9696766CFA"),
+            &hex!("44A3AA3AAE6475CA"),
+            &hex!("A434A8E58500C6E41530538862D686EA9E81301B5AE4226BFA"),
+            &hex!(
                 "F2BEED7BC5098E83FEB5B31608F8E29C388
                 19A89C8E776F1544D4151A4ED3A8B87B9CE"
             ),
-            marker: PhantomData,
-        });
+        );
     }
 
     #[test]
     fn test_vector_22() {
-        test_vector::<U10, [u8; 16]>(TestVector {
-            key: hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
-            nonce: hex!("005B8CCBCD9AF83C9696766CFA"),
-            hdr: &hex!("EC46BB63B02520C33C49FD70"),
-            data: &hex!("B96B49E21D621741632875DB7F6C9243D2D7C2"),
-            expected: &hex!(
+        test_vector::<U10, [u8; 16]>(
+            hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
+            hex!("005B8CCBCD9AF83C9696766CFA"),
+            &hex!("EC46BB63B02520C33C49FD70"),
+            &hex!("B96B49E21D621741632875DB7F6C9243D2D7C2"),
+            &hex!(
                 "31D750A09DA3ED7FDDD49A2032AABF17EC8EBF7D22C8088C666BE5C197"
             ),
-            marker: PhantomData,
-        });
+        );
     }
 
     #[test]
     fn test_vector_23() {
-        test_vector::<U10, [u8; 16]>(TestVector {
-            key: hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
-            nonce: hex!("003EBE94044B9A3C9696766CFA"),
-            hdr: &hex!("47A65AC78B3D594227E85E71"),
-            data: &hex!("E2FCFBB880442C731BF95167C8FFD7895E337076"),
-            expected: &hex!(
+        test_vector::<U10, [u8; 16]>(
+            hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
+            hex!("003EBE94044B9A3C9696766CFA"),
+            &hex!("47A65AC78B3D594227E85E71"),
+            &hex!("E2FCFBB880442C731BF95167C8FFD7895E337076"),
+            &hex!(
                 "E882F1DBD38CE3EDA7C23F04DD65071EB41342ACDF7E00DCCEC7AE52987D"
             ),
-            marker: PhantomData,
-        });
+        );
     }
 
     #[test]
     fn test_vector_24() {
-        test_vector::<U10, [u8; 16]>(TestVector {
-            key: hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
-            nonce: hex!("008D493B30AE8B3C9696766CFA"),
-            hdr: &hex!("6E37A6EF546D955D34AB6059"),
-            data: &hex!("ABF21C0B02FEB88F856DF4A37381BCE3CC128517D4"),
-            expected: &hex!(
+        test_vector::<U10, [u8; 16]>(
+            hex!("D7828D13B2B0BDC325A76236DF93CC6B"),
+            hex!("008D493B30AE8B3C9696766CFA"),
+            &hex!("6E37A6EF546D955D34AB6059"),
+            &hex!("ABF21C0B02FEB88F856DF4A37381BCE3CC128517D4"),
+            &hex!(
                 "F32905B88A641B04B9C9FFB58CC3909
                 00F3DA12AB16DCE9E82EFA16DA62059"
             ),
-            marker: PhantomData,
-        });
+        );
     }
 
     // Assorted other tests ---------------------------------------------------
@@ -682,26 +650,20 @@ mod tests {
     #[cfg(all(feature = "aes", feature = "alloc"))]
     fn encryption_sanity() {
         // Testing for too large associated data
-        let v = TestVector::<U8, [u8; 16]> {
-            key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
-            nonce: hex!("00000003020100A0A1A2A3A4A5"),
-            // This is above the maximum allowed size
-            hdr: &[0u8; 66000],
-            data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E"),
-            expected: &hex!(
-                "588C979A61C663D2F066D0C2C0F9898
-                06D5F6B61DAC38417E8D12CFDF926E0"
-            ),
-            marker: PhantomData,
-        };
 
-        let ccm: Aes128Ccm<U8> = Aes128Ccm::new(&v.key.into());
+        let key = hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF");
+        let nonce = hex!("00000003020100A0A1A2A3A4A5");
+        // This is above the maximum allowed size
+        let hdr = &[0u8; 66000];
+        let data = &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E");
+
+        let ccm: Aes128Ccm<U8> = Aes128Ccm::new(&key.into());
         assert!(ccm
             .encrypt(
-                &v.nonce.into(),
+                &nonce.into(),
                 aead::Payload {
-                    aad: &v.hdr,
-                    msg: &v.data
+                    aad: hdr,
+                    msg: data
                 }
             )
             .is_err());
@@ -711,32 +673,26 @@ mod tests {
     #[cfg(all(feature = "aes", feature = "alloc"))]
     fn decryption_sanity() {
         // Testing for too large associated data
-        let v = TestVector::<U8, [u8; 16]> {
-            key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
-            nonce: hex!("00000003020100A0A1A2A3A4A5"),
-            hdr: &hex!("0001020304050607"),
-            data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E"),
-            expected: &hex!(
-                "588C979A61C663D2F066D0C2C0F9898
-                06D5F6B61DAC38417E8D12CFDF926E0"
-            ),
-            marker: PhantomData,
-        };
 
-        let ccm: Aes128Ccm<U8> = Aes128Ccm::new(&v.key.into());
+        let key = hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF");
+        let nonce = hex!("00000003020100A0A1A2A3A4A5");
+        let hdr = &hex!("0001020304050607");
+        let data = &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E");
+
+        let ccm: Aes128Ccm<U8> = Aes128Ccm::new(&key.into());
         let ciphertext = ccm
             .encrypt(
-                &v.nonce.into(),
+                &nonce.into(),
                 aead::Payload {
-                    aad: &v.hdr,
-                    msg: &v.data,
+                    aad: hdr,
+                    msg: data,
                 },
             )
             .unwrap();
 
         assert!(ccm
             .decrypt(
-                &v.nonce.into(),
+                &nonce.into(),
                 aead::Payload {
                     // This is above the maximum allowed size
                     aad: &[0u8; 66000],
@@ -749,32 +705,25 @@ mod tests {
     #[test]
     #[cfg(all(feature = "aes", feature = "alloc"))]
     fn verification_fail() {
-        let v = TestVector::<U8, [u8; 16]> {
-            key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
-            nonce: hex!("00000003020100A0A1A2A3A4A5"),
-            hdr: &hex!("0001020304050607"),
-            data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E"),
-            expected: &hex!(
-                "588C979A61C663D2F066D0C2C0F9898
-                06D5F6B61DAC38417E8D12CFDF926E0"
-            ),
-            marker: PhantomData,
-        };
+        let key = hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF");
+        let nonce = hex!("00000003020100A0A1A2A3A4A5");
+        let hdr = &hex!("0001020304050607");
+        let data = &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E");
 
-        let ccm: Aes128Ccm<U8> = Aes128Ccm::new(&v.key.into());
+        let ccm: Aes128Ccm<U8> = Aes128Ccm::new(&key.into());
         let mut ciphertext = ccm
             .encrypt(
-                &v.nonce.into(),
+                &nonce.into(),
                 aead::Payload {
-                    aad: &v.hdr,
-                    msg: &v.data,
+                    aad: hdr,
+                    msg: data,
                 },
             )
             .unwrap();
 
         assert!(ccm
             .decrypt(
-                &v.nonce.into(),
+                &nonce.into(),
                 aead::Payload {
                     // This associated data has been tampered with
                     aad: &hex!("0001020304050608"),
@@ -786,9 +735,9 @@ mod tests {
         ciphertext[10] = 0xFF;
         assert!(ccm
             .decrypt(
-                &v.nonce.into(),
+                &nonce.into(),
                 aead::Payload {
-                    aad: &v.hdr,
+                    aad: hdr,
                     msg: &ciphertext
                 }
             )
@@ -798,72 +747,62 @@ mod tests {
     #[test]
     #[cfg(all(feature = "aes", feature = "alloc"))]
     fn no_ad() {
-        let v = TestVector::<U10, [u8; 16]> {
-            key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
-            nonce: hex!("0000000B0A0908A0A1A2A3A4A5"),
-            // No associated data
-            hdr: &[],
-            data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F20"),
-            // Not used
-            expected: &[],
-            marker: PhantomData,
-        };
+        let key = hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF");
+        let nonce = hex!("0000000B0A0908A0A1A2A3A4A5");
+        // No associated data
+        let hdr = &[];
+        let data = &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F20");
 
-        let ccm: Aes128Ccm<U10> = Aes128Ccm::new(&v.key.into());
+        let ccm: Aes128Ccm<U10> = Aes128Ccm::new(&key.into());
         let ciphertext = ccm
             .encrypt(
-                &v.nonce.into(),
+                &nonce.into(),
                 aead::Payload {
-                    aad: &v.hdr,
-                    msg: &v.data,
+                    aad: hdr,
+                    msg: data,
                 },
             )
             .unwrap();
         let plaintext = ccm
             .decrypt(
-                &v.nonce.into(),
+                &nonce.into(),
                 aead::Payload {
-                    aad: &v.hdr,
+                    aad: hdr,
                     msg: &ciphertext,
                 },
             )
             .unwrap();
-        assert_eq!(&v.data[..], plaintext.as_slice());
+        assert_eq!(&data[..], plaintext.as_slice());
     }
 
     #[test]
     #[cfg(all(feature = "aes", feature = "alloc"))]
     fn no_payload() {
-        let v = TestVector::<U10, [u8; 16]> {
-            key: hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"),
-            nonce: hex!("0000000B0A0908A0A1A2A3A4A5"),
-            hdr: &hex!("0001020304050607"),
-            data: &[],
-            // Not used
-            expected: &[],
-            marker: PhantomData,
-        };
+        let key = hex!("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF");
+        let nonce = hex!("0000000B0A0908A0A1A2A3A4A5");
+        let hdr = &hex!("0001020304050607");
+        let data = &[];
 
-        let ccm: Aes128Ccm<U10> = Aes128Ccm::new(&v.key.into());
+        let ccm: Aes128Ccm<U10> = Aes128Ccm::new(&key.into());
         let ciphertext = ccm
             .encrypt(
-                &v.nonce.into(),
+                &nonce.into(),
                 aead::Payload {
-                    aad: &v.hdr,
-                    msg: &v.data,
+                    aad: hdr,
+                    msg: data,
                 },
             )
             .unwrap();
         let plaintext = ccm
             .decrypt(
-                &v.nonce.into(),
+                &nonce.into(),
                 aead::Payload {
-                    aad: &v.hdr,
+                    aad: hdr,
                     msg: &ciphertext,
                 },
             )
             .unwrap();
-        assert_eq!(&v.data[..], plaintext.as_slice());
+        assert_eq!(&data[..], plaintext.as_slice());
     }
 
     // Test implementation ----------------------------------------------------
@@ -890,69 +829,68 @@ mod tests {
         }
     }
 
-    struct TestVector<'a, TagSize: CcmTagSize, Key: CcmKey<TagSize>> {
+    #[cfg(all(feature = "aes", feature = "alloc"))]
+    fn test_vector<'a, TagSize: CcmTagSize, Key: CcmKey<TagSize>>(
         key: Key,
         nonce: [u8; 13],
         hdr: &'a [u8],
         data: &'a [u8],
         expected: &'a [u8],
-        marker: PhantomData<TagSize>,
-    }
-
-    #[cfg(all(feature = "aes", feature = "alloc"))]
-    fn test_vector<TagSize: CcmTagSize, Key: CcmKey<TagSize>>(
-        v: TestVector<TagSize, Key>,
     ) {
-        let ccm = v.key.get_ccm();
+        let ccm = key.get_ccm();
 
         let ciphertext = ccm
             .encrypt(
-                &GenericArray::from_slice(&v.nonce),
+                &GenericArray::from_slice(&nonce),
                 aead::Payload {
-                    aad: &v.hdr,
-                    msg: &v.data,
+                    aad: hdr,
+                    msg: data,
                 },
             )
             .unwrap();
-        assert_eq!(&v.expected[..], ciphertext.as_slice());
+        assert_eq!(&expected[..], ciphertext.as_slice());
 
         let plaintext = ccm
             .decrypt(
-                &GenericArray::from_slice(&v.nonce),
+                &GenericArray::from_slice(&nonce),
                 aead::Payload {
-                    aad: &v.hdr,
+                    aad: hdr,
                     msg: &ciphertext,
                 },
             )
             .unwrap();
-        assert_eq!(&v.data[..], plaintext.as_slice());
+        assert_eq!(&data[..], plaintext.as_slice());
     }
 
     #[cfg(all(feature = "aes", feature = "heapless"))]
-    fn test_vector<TagSize: CcmTagSize, Key: CcmKey<TagSize>>(
-        v: TestVector<TagSize, Key>,
+    fn test_vector<'a, TagSize: CcmTagSize, Key: CcmKey<TagSize>>(
+        key: Key,
+        nonce: [u8; 13],
+        hdr: &'a [u8],
+        data: &'a [u8],
+        expected: &'a [u8],
     ) {
         use aead::{consts::U128, heapless::Vec};
 
-        let ccm = v.key.get_ccm();
+        let ccm = key.get_ccm();
 
         let mut buffer: Vec<u8, U128> = Vec::new();
-        buffer.extend_from_slice(v.data).unwrap();
+        buffer.extend_from_slice(data).unwrap();
 
         ccm.encrypt_in_place(
-            &GenericArray::from_slice(&v.nonce),
-            v.hdr,
+            &GenericArray::from_slice(&nonce),
+            hdr,
             &mut buffer,
         )
         .unwrap();
-        assert_eq!(&v.expected[..], &buffer[..v.expected.len()]);
+        assert_eq!(&expected[..], &buffer[..expected.len()]);
 
         ccm.decrypt_in_place(
-            &GenericArray::from_slice(&v.nonce),
-            v.hdr,
+            &GenericArray::from_slice(&nonce),
+            hdr,
             &mut buffer,
         )
         .unwrap();
-        assert_eq!(&v.data[..], &buffer[..v.data.len()]);
+        assert_eq!(&data[..], &buffer[..data.len()]);
     }
 }
