@@ -333,7 +333,6 @@ mod tests {
             nonce: hex!("00000003020100A0A1A2A3A4A5"),
             hdr: &hex!("0001020304050607"),
             data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E"),
-            mac_len: 8,
             expected: &hex!(
                 "588C979A61C663D2F066D0C2C0F9898
                 06D5F6B61DAC38417E8D12CFDF926E0"
@@ -349,7 +348,6 @@ mod tests {
             nonce: hex!("00000004030201A0A1A2A3A4A5"),
             hdr: &hex!("0001020304050607"),
             data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F"),
-            mac_len: 8,
             expected: &hex!(
                 "72C91A36E135F8CF291CA894085C87E
                 3CC15C439C9E43A3BA091D56E10400916"
@@ -365,7 +363,6 @@ mod tests {
             nonce: hex!("00000005040302A0A1A2A3A4A5"),
             hdr: &hex!("0001020304050607"),
             data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F20"),
-            mac_len: 8,
             expected: &hex!(
                 "51B1E5F44A197D1DA46B0F8E2D282AE87
                 1E838BB64DA8596574ADAA76FBD9FB0C5"
@@ -381,7 +378,6 @@ mod tests {
             nonce: hex!("00000006050403A0A1A2A3A4A5"),
             hdr: &hex!("000102030405060708090A0B"),
             data: &hex!("0C0D0E0F101112131415161718191A1B1C1D1E"),
-            mac_len: 8,
             expected: &hex!(
                 "A28C6865939A9A79FAAA5C4C2A9D4A91CDAC8C96C861B9C9E61EF1"
             ),
@@ -396,7 +392,6 @@ mod tests {
             nonce: hex!("00000007060504A0A1A2A3A4A5"),
             hdr: &hex!("000102030405060708090A0B"),
             data: &hex!("0C0D0E0F101112131415161718191A1B1C1D1E1F"),
-            mac_len: 8,
             expected: &hex!(
                 "DCF1FB7B5D9E23FB9D4E131253658AD86EBDCA3E51E83F077D9C2D93"
             ),
@@ -411,7 +406,6 @@ mod tests {
             nonce: hex!("00000008070605A0A1A2A3A4A5"),
             hdr: &hex!("000102030405060708090A0B"),
             data: &hex!("0C0D0E0F101112131415161718191A1B1C1D1E1F20"),
-            mac_len: 8,
             expected: &hex!(
                 "6FC1B011F006568B5171A42D953D469B2570A4BD87405A0443AC91CB94"
             ),
@@ -426,7 +420,6 @@ mod tests {
             nonce: hex!("00000009080706A0A1A2A3A4A5"),
             hdr: &hex!("0001020304050607"),
             data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E"),
-            mac_len: 10,
             expected: &hex!(
                 "0135D1B2C95F41D5D1D4FEC185D166B80
                 94E999DFED96C048C56602C97ACBB7490"
@@ -442,7 +435,6 @@ mod tests {
             nonce: hex!("0000000A090807A0A1A2A3A4A5"),
             hdr: &hex!("0001020304050607"),
             data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F"),
-            mac_len: 10,
             expected: &hex!(
                 "7B75399AC0831DD2F0BBD75879A2FD8F6C
                 AE6B6CD9B7DB24C17B4433F434963F34B4"
@@ -458,7 +450,6 @@ mod tests {
             nonce: hex!("0000000B0A0908A0A1A2A3A4A5"),
             hdr: &hex!("0001020304050607"),
             data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F20"),
-            mac_len: 10,
             expected: &hex!(
                 "82531A60CC24945A4B8279181AB5C84DF21
                 CE7F9B73F42E197EA9C07E56B5EB17E5F4E"
@@ -474,7 +465,6 @@ mod tests {
             nonce: hex!("0000000C0B0A09A0A1A2A3A4A5"),
             hdr: &hex!("000102030405060708090A0B"),
             data: &hex!("0C0D0E0F101112131415161718191A1B1C1D1E"),
-            mac_len: 10,
             expected: &hex!(
                 "07342594157785152B074098330ABB141B947B566AA9406B4D999988DD"
             ),
@@ -489,7 +479,6 @@ mod tests {
             nonce: hex!("0000000D0C0B0AA0A1A2A3A4A5"),
             hdr: &hex!("000102030405060708090A0B"),
             data: &hex!("0C0D0E0F101112131415161718191A1B1C1D1E1F"),
-            mac_len: 10,
             expected: &hex!(
                 "676BB20380B0E301E8AB79590A396DA78B834934F53AA2E9107A8B6C022C"
             ),
@@ -504,7 +493,6 @@ mod tests {
             nonce: hex!("0000000E0D0C0BA0A1A2A3A4A5"),
             hdr: &hex!("000102030405060708090A0B"),
             data: &hex!("0C0D0E0F101112131415161718191A1B1C1D1E1F20"),
-            mac_len: 10,
             expected: &hex!(
                 "C0FFA0D6F05BDB67F24D43A4338D2AA
                 4BED7B20E43CD1AA31662E7AD65D6DB"
@@ -520,7 +508,6 @@ mod tests {
             nonce: hex!("00412B4EA9CDBE3C9696766CFA"),
             hdr: &hex!("0BE1A88BACE018B1"),
             data: &hex!("08E8CF97D820EA258460E96AD9CF5289054D895CEAC47C"),
-            mac_len: 8,
             expected: &hex!(
                 "4CB97F86A2A4689A877947AB8091EF5
                 386A6FFBDD080F8E78CF7CB0CDDD7B3"
@@ -536,7 +523,6 @@ mod tests {
             nonce: hex!("0033568EF7B2633C9696766CFA"),
             hdr: &hex!("63018F76DC8A1BCB"),
             data: &hex!("9020EA6F91BDD85AFA0039BA4BAFF9BFB79C7028949CD0EC"),
-            mac_len: 8,
             expected: &hex!(
                 "4CCB1E7CA981BEFAA0726C55D3780612
                 98C85C92814ABC33C52EE81D7D77C08A"
@@ -552,7 +538,6 @@ mod tests {
             nonce: hex!("00103FE41336713C9696766CFA"),
             hdr: &hex!("AA6CFA36CAE86B40"),
             data: &hex!("B916E0EACC1C00D7DCEC68EC0B3BBB1A02DE8A2D1AA346132E"),
-            mac_len: 8,
             expected: &hex!(
                 "B1D23A2220DDC0AC900D9AA03C61FCF4A
                 559A4417767089708A776796EDB723506"
@@ -568,7 +553,6 @@ mod tests {
             nonce: hex!("00764C63B8058E3C9696766CFA"),
             hdr: &hex!("D0D0735C531E1BECF049C244"),
             data: &hex!("12DAAC5630EFA5396F770CE1A66B21F7B2101C"),
-            mac_len: 8,
             expected: &hex!(
                 "14D253C3967B70609B7CBB7C499160283245269A6F49975BCADEAF"
             ),
@@ -583,7 +567,6 @@ mod tests {
             nonce: hex!("00F8B678094E3B3C9696766CFA"),
             hdr: &hex!("77B60F011C03E1525899BCAE"),
             data: &hex!("E88B6A46C78D63E52EB8C546EFB5DE6F75E9CC0D"),
-            mac_len: 8,
             expected: &hex!(
                 "5545FF1A085EE2EFBF52B2E04BEE1E2336C73E3F762C0C7744FE7E3C"
             ),
@@ -598,7 +581,6 @@ mod tests {
             nonce: hex!("00D560912D3F703C9696766CFA"),
             hdr: &hex!("CD9044D2B71FDB8120EA60C0"),
             data: &hex!("6435ACBAFB11A82E2F071D7CA4A5EBD93A803BA87F"),
-            mac_len: 8,
             expected: &hex!(
                 "009769ECABDF48625594C59251E6035722675E04C847099E5AE0704551"
             ),
@@ -613,7 +595,6 @@ mod tests {
             nonce: hex!("0042FFF8F1951C3C9696766CFA"),
             hdr: &hex!("D85BC7E69F944FB8"),
             data: &hex!("8A19B950BCF71A018E5E6701C91787659809D67DBEDD18"),
-            mac_len: 10,
             expected: &hex!(
                 "BC218DAA947427B6DB386A99AC1AEF23A
                 DE0B52939CB6A637CF9BEC2408897C6BA"
@@ -629,7 +610,6 @@ mod tests {
             nonce: hex!("00920F40E56CDC3C9696766CFA"),
             hdr: &hex!("74A0EBC9069F5B37"),
             data: &hex!("1761433C37C5A35FC1F39F406302EB907C6163BE38C98437"),
-            mac_len: 10,
             expected: &hex!(
                 "5810E6FD25874022E80361A478E3E9CF48
                 4AB04F447EFFF6F0A477CC2FC9BF548944"
@@ -645,7 +625,6 @@ mod tests {
             nonce: hex!("0027CA0C7120BC3C9696766CFA"),
             hdr: &hex!("44A3AA3AAE6475CA"),
             data: &hex!("A434A8E58500C6E41530538862D686EA9E81301B5AE4226BFA"),
-            mac_len: 10,
             expected: &hex!(
                 "F2BEED7BC5098E83FEB5B31608F8E29C388
                 19A89C8E776F1544D4151A4ED3A8B87B9CE"
@@ -661,7 +640,6 @@ mod tests {
             nonce: hex!("005B8CCBCD9AF83C9696766CFA"),
             hdr: &hex!("EC46BB63B02520C33C49FD70"),
             data: &hex!("B96B49E21D621741632875DB7F6C9243D2D7C2"),
-            mac_len: 10,
             expected: &hex!(
                 "31D750A09DA3ED7FDDD49A2032AABF17EC8EBF7D22C8088C666BE5C197"
             ),
@@ -676,7 +654,6 @@ mod tests {
             nonce: hex!("003EBE94044B9A3C9696766CFA"),
             hdr: &hex!("47A65AC78B3D594227E85E71"),
             data: &hex!("E2FCFBB880442C731BF95167C8FFD7895E337076"),
-            mac_len: 10,
             expected: &hex!(
                 "E882F1DBD38CE3EDA7C23F04DD65071EB41342ACDF7E00DCCEC7AE52987D"
             ),
@@ -691,7 +668,6 @@ mod tests {
             nonce: hex!("008D493B30AE8B3C9696766CFA"),
             hdr: &hex!("6E37A6EF546D955D34AB6059"),
             data: &hex!("ABF21C0B02FEB88F856DF4A37381BCE3CC128517D4"),
-            mac_len: 10,
             expected: &hex!(
                 "F32905B88A641B04B9C9FFB58CC3909
                 00F3DA12AB16DCE9E82EFA16DA62059"
@@ -712,7 +688,6 @@ mod tests {
             // This is above the maximum allowed size
             hdr: &[0u8; 66000],
             data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E"),
-            mac_len: 8,
             expected: &hex!(
                 "588C979A61C663D2F066D0C2C0F9898
                 06D5F6B61DAC38417E8D12CFDF926E0"
@@ -741,7 +716,6 @@ mod tests {
             nonce: hex!("00000003020100A0A1A2A3A4A5"),
             hdr: &hex!("0001020304050607"),
             data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E"),
-            mac_len: 8,
             expected: &hex!(
                 "588C979A61C663D2F066D0C2C0F9898
                 06D5F6B61DAC38417E8D12CFDF926E0"
@@ -780,7 +754,6 @@ mod tests {
             nonce: hex!("00000003020100A0A1A2A3A4A5"),
             hdr: &hex!("0001020304050607"),
             data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E"),
-            mac_len: 8,
             expected: &hex!(
                 "588C979A61C663D2F066D0C2C0F9898
                 06D5F6B61DAC38417E8D12CFDF926E0"
@@ -831,7 +804,6 @@ mod tests {
             // No associated data
             hdr: &[],
             data: &hex!("08090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F20"),
-            mac_len: 10,
             // Not used
             expected: &[],
             marker: PhantomData,
@@ -867,7 +839,6 @@ mod tests {
             nonce: hex!("0000000B0A0908A0A1A2A3A4A5"),
             hdr: &hex!("0001020304050607"),
             data: &[],
-            mac_len: 10,
             // Not used
             expected: &[],
             marker: PhantomData,
@@ -924,7 +895,6 @@ mod tests {
         nonce: [u8; 13],
         hdr: &'a [u8],
         data: &'a [u8],
-        mac_len: usize,
         expected: &'a [u8],
         marker: PhantomData<TagSize>,
     }
@@ -933,7 +903,6 @@ mod tests {
     fn test_vector<TagSize: CcmTagSize, Key: CcmKey<TagSize>>(
         v: TestVector<TagSize, Key>,
     ) {
-        assert_eq!(v.mac_len, TagSize::to_usize());
         let ccm = v.key.get_ccm();
 
         let ciphertext = ccm
@@ -965,7 +934,6 @@ mod tests {
     ) {
         use aead::{consts::U128, heapless::Vec};
 
-        assert_eq!(v.mac_len, TagSize::to_usize());
         let ccm = v.key.get_ccm();
 
         let mut buffer: Vec<u8, U128> = Vec::new();
