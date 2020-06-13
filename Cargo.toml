@@ -4,7 +4,7 @@ description = """
 A pure-Rust, #![no_std], zero-allocation AES-CCM implementation ported from
 TinyCrypt using RustCrypto's AES.
 """
-version = "0.4.1"
+version = "0.5.0"
 authors = [
     "Martin Disch <martindisch@gmail.com>",
     "Tony Arcieri <bascule@gmail.com>",
