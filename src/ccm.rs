@@ -644,6 +644,96 @@ mod tests {
         );
     }
 
+    // NIST Cryptographic Algorithm Validation Program (CAVP) test vectors ----
+
+    #[test]
+    fn test_vector_30() {
+        test_vector::<U4, [u8; 32]>(
+            hex!("e1b8a927a95efe94656677b692662000278b441c79e879dd5c0ddc758bdc9ee8"),
+            hex!("a544218dadd3c10583db49cf39"),
+            &hex!(""),
+            &hex!(""),
+            &hex!("8a19a133"),
+        );
+    }
+
+    #[test]
+    fn test_vector_45() {
+        test_vector::<U16, [u8; 32]>(
+            hex!("af063639e66c284083c5cf72b70d8bc277f5978e80d9322d99f2fdc718cda569"),
+            hex!("a544218dadd3c10583db49cf39"),
+            &hex!(""),
+            &hex!(""),
+            &hex!("97e1a8dd4259ccd2e431e057b0397fcf"),
+        );
+    }
+
+    #[test]
+    fn test_vector_90() {
+        test_vector::<U4, [u8; 32]>(
+            hex!("f7079dfa3b5c7b056347d7e437bcded683abd6e2c9e069d333284082cbb5d453"),
+            hex!("a544218dadd3c10583db49cf39"),
+            &hex!(""),
+            &hex!("3c0e2815d37d844f7ac240ba9d6e3a0b2a86f706e885959e"),
+            &hex!("63e00d30e4b08fd2a1cc8d70fab327b2368e77a93be4f4123d14fb3f"),
+        );
+    }
+
+    #[test]
+    fn test_vector_105() {
+        test_vector::<U16, [u8; 32]>(
+            hex!("1b0e8df63c57f05d9ac457575ea764524b8610ae5164e6215f426f5a7ae6ede4"),
+            hex!("a544218dadd3c10583db49cf39"),
+            &hex!(""),
+            &hex!("3c0e2815d37d844f7ac240ba9d6e3a0b2a86f706e885959e"),
+            &hex!("f0050ad16392021a3f40207bed3521fb1e9f808f49830c423a578d179902f912f9ea1afbce1120b3"),
+        );
+    }
+
+    #[test]
+    fn test_vector_150() {
+        test_vector::<U4, [u8; 32]>(
+            hex!("a4bc10b1a62c96d459fbaf3a5aa3face7313bb9e1253e696f96a7a8e36801088"),
+            hex!("a544218dadd3c10583db49cf39"),
+            &hex!("3c0e2815d37d844f7ac240ba9d6e3a0b2a86f706e885959e09a1005e024f6907"),
+            &hex!(""),
+            &hex!("866d4227"),
+        );
+    }
+
+    #[test]
+    fn test_vector_165() {
+        test_vector::<U16, [u8; 32]>(
+            hex!("8c5cf3457ff22228c39c051c4e05ed4093657eb303f859a9d4b0f8be0127d88a"),
+            hex!("a544218dadd3c10583db49cf39"),
+            &hex!("3c0e2815d37d844f7ac240ba9d6e3a0b2a86f706e885959e09a1005e024f6907"),
+            &hex!(""),
+            &hex!("867b0d87cf6e0f718200a97b4f6d5ad5"),
+        );
+    }
+
+    #[test]
+    fn test_vector_210() {
+        test_vector::<U4, [u8; 32]>(
+            hex!("705334e30f53dd2f92d190d2c1437c8772f940c55aa35e562214ed45bd458ffe"),
+            hex!("a544218dadd3c10583db49cf39"),
+            &hex!("3c0e2815d37d844f7ac240ba9d6e3a0b2a86f706e885959e09a1005e024f6907"),
+            &hex!("e8de970f6ee8e80ede933581b5bcf4d837e2b72baa8b00c3"),
+            &hex!("c0ea400b599561e7905b99262b4565d5c3dc49fad84d7c69ef891339"),
+        );
+    }
+
+    #[test]
+    fn test_vector_225() {
+        test_vector::<U16, [u8; 32]>(
+            hex!("314a202f836f9f257e22d8c11757832ae5131d357a72df88f3eff0ffcee0da4e"),
+            hex!("a544218dadd3c10583db49cf39"),
+            &hex!("3c0e2815d37d844f7ac240ba9d6e3a0b2a86f706e885959e09a1005e024f6907"),
+            &hex!("e8de970f6ee8e80ede933581b5bcf4d837e2b72baa8b00c3"),
+            &hex!("8d34cdca37ce77be68f65baf3382e31efa693e63f914a781367f30f2eaad8c063ca50795acd90203"),
+        );
+    }
+
     // Assorted other tests ---------------------------------------------------
 
     #[test]
